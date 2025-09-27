@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useAuth } from '../hooks/useAuth'
 
+const API = 'http://localhost:4000'
+
 export function StudentCheckin() {
   const { address, isConnected } = useAccount()
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, getAuthHeaders, login } = useAuth()
   const [sessionId, setSessionId] = useState<string>('1')
   const [tokenUri, setTokenUri] = useState<string>('ipfs://metadata')
   const [loading, setLoading] = useState(false)
@@ -13,30 +15,31 @@ export function StudentCheckin() {
   const submit = async () => {
     if (!isConnected || !address) return alert('请先连接钱包')
     if (!isAuthenticated) return alert('请先登录')
-    
+
     setLoading(true)
     setResult('')
-    
+
     try {
-      // 简化版签到 - 不需要后端API
-      // 这里可以添加前端逻辑，比如记录到localStorage
-      const attendanceRecord = {
-        sessionId: Number(sessionId),
-        studentAddress: address,
-        tokenUri,
-        timestamp: new Date().toISOString(),
-        status: 'present'
+      const response = await fetch(`${API}/api/attendance/checkin`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          sessionId: Number(sessionId),
+          tokenUri
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
-      
-      // 保存到本地存储
-      const existingRecords = JSON.parse(localStorage.getItem('attendance_records') || '[]')
-      existingRecords.push(attendanceRecord)
-      localStorage.setItem('attendance_records', JSON.stringify(existingRecords))
-      
-      setResult(`✅ 签到成功！课次ID: ${sessionId}`)
-      console.log('签到记录已保存到本地存储:', attendanceRecord)
+
+      const data = await response.json()
+      setResult(`✅ 签到成功！交易哈希: ${data.hash}`)
+      console.log('签到成功:', data)
     } catch (e: any) {
-      setResult(`❌ 错误: ${e.message}`)
+      console.error('签到失败:', e)
+      setResult(`❌ 签到失败: ${e.message}`)
     } finally {
       setLoading(false)
     }
