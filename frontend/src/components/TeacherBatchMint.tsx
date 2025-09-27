@@ -35,9 +35,23 @@ export function TeacherBatchMint() {
   const [tokenUri, setTokenUri] = useState<string>('ipfs://metadata')
   const [isMinting, setIsMinting] = useState(false)
 
-  const contractAddress = (import.meta.env.VITE_CONTRACT_ADDRESS || '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9') as `0x${string}`
+  // 强制使用正确的合约地址，忽略环境变量
+  const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3' as `0x${string}`
 
-  const { writeContract, data: hash, error, isPending } = useWriteContract()
+  const { writeContract, writeContractAsync, data: hash, error, isPending } = useWriteContract()
+
+  // 添加超时机制，防止按钮一直卡在"铸造中"状态
+  useEffect(() => {
+    if (isMinting) {
+      const timeout = setTimeout(() => {
+        console.log('铸造超时，重置状态')
+        setIsMinting(false)
+        alert('交易超时，请检查 MetaMask 连接')
+      }, 10000) // 10秒超时
+
+      return () => clearTimeout(timeout)
+    }
+  }, [isMinting])
   
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
@@ -51,6 +65,23 @@ export function TeacherBatchMint() {
       setIsMinting(false)
     }
   }, [isConfirmed, error])
+
+  // 监听 writeContract 的状态变化
+  useEffect(() => {
+    if (hash) {
+      console.log('交易哈希已生成:', hash)
+      alert(`交易已发送: ${hash}`)
+      setIsMinting(false)
+    }
+  }, [hash])
+
+  useEffect(() => {
+    if (error) {
+      console.error('writeContract 错误:', error)
+      alert(`交易失败: ${error.message}`)
+      setIsMinting(false)
+    }
+  }, [error])
 
   const handleBatchMint = async () => {
     if (!contractAddress || !studentAddresses.trim()) {
@@ -76,20 +107,15 @@ export function TeacherBatchMint() {
       return
     }
 
+    console.log('开始批量铸造:', { contractAddress, sessionId, addresses, tokenUri })
     setIsMinting(true)
 
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: contractABI,
-        functionName: 'batchMintAttendance',
-        args: [BigInt(sessionId), addresses as `0x${string}`[], tokenUri],
-      })
-    } catch (err: any) {
-      console.error('铸造失败:', err)
-      alert(`铸造失败: ${err.message || '请检查权限和参数'}`)
-      setIsMinting(false)
-    }
+    writeContract({
+      address: contractAddress,
+      abi: contractABI,
+      functionName: 'batchMintAttendance',
+      args: [BigInt(sessionId), addresses as `0x${string}`[], tokenUri],
+    })
   }
 
   const handleSingleMint = async () => {
@@ -104,18 +130,23 @@ export function TeacherBatchMint() {
       return
     }
 
+    console.log('开始单个铸造:', { contractAddress, sessionId, address, tokenUri })
     setIsMinting(true)
 
     try {
-      writeContract({
+      // 使用 writeContractAsync 方法
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: contractABI,
         functionName: 'mintAttendance',
         args: [BigInt(sessionId), address as `0x${string}`, tokenUri],
       })
+      console.log('交易已发送:', hash)
+      alert(`交易已发送: ${hash}`)
+      setIsMinting(false)
     } catch (err: any) {
-      console.error('铸造失败:', err)
-      alert(`铸造失败: ${err.message || '请检查权限和参数'}`)
+      console.error('交易失败:', err)
+      alert(`交易失败: ${err.message || '请检查权限和参数'}`)
       setIsMinting(false)
     }
   }
@@ -166,10 +197,22 @@ export function TeacherBatchMint() {
         <button 
           onClick={handleBatchMint} 
           disabled={isProcessing}
-          style={{ padding: '8px 16px' }}
+          style={{ marginRight: 8, padding: '8px 16px' }}
         >
           {isProcessing ? '批量铸造中...' : '批量铸造'}
         </button>
+
+        {isMinting && (
+          <button 
+            onClick={() => {
+              console.log('手动重置铸造状态')
+              setIsMinting(false)
+            }}
+            style={{ padding: '8px 16px', backgroundColor: '#ff6b6b', color: 'white' }}
+          >
+            重置状态
+          </button>
+        )}
       </div>
 
       {hash && (
@@ -190,4 +233,6 @@ export function TeacherBatchMint() {
         <div>合约地址: {contractAddress}</div>
         <div>注意: 只有合约所有者才能执行铸造操作</div>
       </div>
-  
+    </div>
+  )
+}
