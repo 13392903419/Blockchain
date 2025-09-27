@@ -2,11 +2,9 @@ import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useAuth } from '../hooks/useAuth'
 
-const API = 'http://localhost:4000'
-
 export function StudentCheckin() {
   const { address, isConnected } = useAccount()
-  const { isAuthenticated, getAuthHeaders, login } = useAuth()
+  const { isAuthenticated, login } = useAuth()
   const [sessionId, setSessionId] = useState<string>('1')
   const [tokenUri, setTokenUri] = useState<string>('ipfs://metadata')
   const [loading, setLoading] = useState(false)
@@ -15,18 +13,30 @@ export function StudentCheckin() {
   const submit = async () => {
     if (!isConnected || !address) return alert('请先连接钱包')
     if (!isAuthenticated) return alert('请先登录')
-    setLoading(true); setResult('')
+    
+    setLoading(true)
+    setResult('')
+    
     try {
-      const res = await fetch(`${API}/api/attendance/checkin`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ sessionId: Number(sessionId), tokenUri })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '签到失败')
-      setResult(`交易哈希: ${data.hash}`)
-    } catch (e:any) {
-      setResult(`错误: ${e.message}`)
+      // 简化版签到 - 不需要后端API
+      // 这里可以添加前端逻辑，比如记录到localStorage
+      const attendanceRecord = {
+        sessionId: Number(sessionId),
+        studentAddress: address,
+        tokenUri,
+        timestamp: new Date().toISOString(),
+        status: 'present'
+      }
+      
+      // 保存到本地存储
+      const existingRecords = JSON.parse(localStorage.getItem('attendance_records') || '[]')
+      existingRecords.push(attendanceRecord)
+      localStorage.setItem('attendance_records', JSON.stringify(existingRecords))
+      
+      setResult(`✅ 签到成功！课次ID: ${sessionId}`)
+      console.log('签到记录已保存到本地存储:', attendanceRecord)
+    } catch (e: any) {
+      setResult(`❌ 错误: ${e.message}`)
     } finally {
       setLoading(false)
     }

@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
-type Course = { id: string; name: string; description?: string }
-type Session = { id: string; courseId: string; startTime: number; endTime: number }
-
-const API = 'http://localhost:4000'
+type Course = { id: string; name: string; description?: string; createdAt: string }
+type Session = { id: string; courseId: string; startTime: number; endTime: number; createdAt: string }
 
 export function CourseManager() {
-  const { isAuthenticated, getAuthHeaders, login } = useAuth()
+  const { isAuthenticated, login } = useAuth()
   const [courses, setCourses] = useState<Course[]>([])
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -17,58 +15,77 @@ export function CourseManager() {
   const [end, setEnd] = useState<string>('')
   const [sessions, setSessions] = useState<Session[]>([])
 
-  const loadCourses = async () => {
+  // 从本地存储加载课程
+  const loadCourses = () => {
     if (!isAuthenticated) return
-    const res = await fetch(`${API}/api/courses`, {
-      headers: getAuthHeaders()
-    })
-    const data = await res.json()
-    setCourses(Array.isArray(data) ? data : [])
+    const savedCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+    setCourses(savedCourses)
   }
 
-  const loadSessions = async (courseId: string) => {
+  // 从本地存储加载课次
+  const loadSessions = (courseId: string) => {
     if (!isAuthenticated) return
-    const res = await fetch(`${API}/api/courses/${courseId}/sessions`, {
-      headers: getAuthHeaders()
-    })
-    const data = await res.json()
-    setSessions(Array.isArray(data) ? data : [])
+    const savedSessions = JSON.parse(localStorage.getItem('sessions') || '[]')
+    const courseSessions = savedSessions.filter((s: Session) => s.courseId === courseId)
+    setSessions(courseSessions)
   }
 
   useEffect(() => { loadCourses() }, [isAuthenticated])
   useEffect(() => { if (selectedCourse) loadSessions(selectedCourse) }, [selectedCourse, isAuthenticated])
 
-  const createCourse = async () => {
+  // 创建课程 - 保存到本地存储
+  const createCourse = () => {
     if (!isAuthenticated) return alert('请先登录')
     if (!name.trim()) return alert('请输入课程名称')
-    const res = await fetch(`${API}/api/courses`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ name, description })
-    })
-    const c = await res.json()
-    setName(''); setDescription('')
-    await loadCourses()
-    setSelectedCourse(c.id)
+    
+    const newCourse: Course = {
+      id: `course_${Date.now()}`,
+      name: name.trim(),
+      description: description.trim(),
+      createdAt: new Date().toISOString()
+    }
+    
+    const existingCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+    existingCourses.push(newCourse)
+    localStorage.setItem('courses', JSON.stringify(existingCourses))
+    
+    setName('')
+    setDescription('')
+    loadCourses()
+    setSelectedCourse(newCourse.id)
+    
+    console.log('课程已创建:', newCourse)
   }
 
-  const createSession = async () => {
+  // 创建课次 - 保存到本地存储
+  const createSession = () => {
     if (!isAuthenticated) return alert('请先登录')
     if (!selectedCourse) return alert('请选择课程')
     if (!start || !end) return alert('请输入开始和结束时间')
+    
     const startTime = Date.parse(start)
     const endTime = Date.parse(end)
     if (isNaN(startTime) || isNaN(endTime) || endTime <= startTime) {
       return alert('时间不合法')
     }
-    const res = await fetch(`${API}/api/courses/${selectedCourse}/sessions`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ startTime, endTime })
-    })
-    await res.json()
-    setStart(''); setEnd('')
-    await loadSessions(selectedCourse)
+    
+    const newSession: Session = {
+      id: `session_${Date.now()}`,
+      courseId: selectedCourse,
+      startTime,
+      endTime,
+      createdAt: new Date().toISOString()
+    }
+    
+    const existingSessions = JSON.parse(localStorage.getItem('sessions') || '[]')
+    existingSessions.push(newSession)
+    localStorage.setItem('sessions', JSON.stringify(existingSessions))
+    
+    setStart('')
+    setEnd('')
+    loadSessions(selectedCourse)
+    
+    console.log('课次已创建:', newSession)
   }
 
   if (!isAuthenticated) {
