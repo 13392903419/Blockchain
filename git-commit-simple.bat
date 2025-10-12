@@ -26,7 +26,7 @@ git add todolist
 
 echo.
 echo 2. Committing changes...
-git commit -m "link to the backend server further: finish the attendance record query"
+git commit -m "finish link to the backend server"
 
 if %errorlevel% neq 0 (
     echo Git commit failed!
