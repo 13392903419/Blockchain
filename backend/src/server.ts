@@ -6,9 +6,17 @@ const rateLimit = require("express-rate-limit");
 const { ethers } = require("ethers");
 const { generateChallenge, verifySignature, generateToken, isTeacher } = require("./auth");
 const { authenticateToken, requireTeacher, requireStudent } = require("./middleware");
-const { db } = require("./database");
+const { db, connectDB } = require("./database");
 
 dotenv.config();
+
+// 数据库连接
+connectDB().then(() => {
+  console.log('✅ Database connected successfully');
+}).catch((error) => {
+  console.error('❌ Database connection failed:', error);
+  process.exit(1);
+});
 
 const app = express();
 
