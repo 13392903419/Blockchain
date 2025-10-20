@@ -7,6 +7,7 @@ import { TeacherBatchMint } from './components/TeacherBatchMint'
 import { CourseManager } from './components/CourseManager'
 import { StudentCheckin } from './components/StudentCheckin'
 import { AttendanceRecords } from './components/AttendanceRecords'
+import { AttendanceReports } from './components/AttendanceReports'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const config = createConfig({
@@ -62,6 +63,9 @@ function App() {
           </div>
           <div style={{ marginTop: 16 }}>
             <AttendanceRecords />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <AttendanceReports />
           </div>
         </div>
       </WagmiProvider>

@@ -13,7 +13,7 @@ dotenv.config();
 // 数据库连接
 connectDB().then(() => {
   console.log('✅ Database connected successfully');
-}).catch((error) => {
+}).catch((error: any) => {
   console.error('❌ Database connection failed:', error);
   process.exit(1);
 });
@@ -347,6 +347,143 @@ app.get("/api/courses/:courseId/stats", authenticateToken, (req: any, res: any )
     res.json(stats);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// 统计报表 API
+app.get('/api/reports/course-stats', authenticateToken, async (req: any, res: any) => {
+  try {
+    const courses = await db.getAllCourses();
+    const courseStats = [];
+
+    for (const course of courses) {
+      const sessions = await db.getSessionsByCourse(course.id);
+      const courseStat = await db.getCourseStats(course.id);
+      
+      const attendanceRecords = [];
+      for (const session of sessions) {
+        const sessionStats = await db.getSessionStats(session.id);
+        attendanceRecords.push({
+          sessionId: session.id,
+          sessionName: session.name,
+          attendanceRate: sessionStats.attendanceRate,
+          presentCount: sessionStats.presentCount,
+          totalCount: sessionStats.totalStudents
+        });
+      }
+
+      courseStats.push({
+        courseId: course.id,
+        courseName: course.name,
+        totalSessions: courseStat.totalSessions,
+        totalStudents: courseStat.totalAttendance,
+        averageAttendanceRate: courseStat.averageAttendanceRate,
+        attendanceRecords
+      });
+    }
+
+    res.json(courseStats);
+  } catch (error) {
+    console.error('Course stats error:', error);
+    res.status(500).json({ error: 'Failed to get course statistics' });
+  }
+});
+
+app.get('/api/reports/student-stats', authenticateToken, async (req: any, res: any) => {
+  try {
+    const allRecords = await db.getAllAttendanceRecords();
+    const studentMap = new Map();
+
+    for (const record of allRecords) {
+      if (!studentMap.has(record.studentAddress)) {
+        studentMap.set(record.studentAddress, {
+          studentAddress: record.studentAddress,
+          totalSessions: 0,
+          attendedSessions: 0,
+          attendanceHistory: []
+        });
+      }
+
+      const studentStat = studentMap.get(record.studentAddress);
+      studentStat.totalSessions++;
+      
+      if (record.status === 'present') {
+        studentStat.attendedSessions++;
+      }
+
+      // 获取会话和课程信息
+      const session = await db.getSession(record.sessionId);
+      const course = session ? await db.getCourse(session.courseId) : null;
+
+      studentStat.attendanceHistory.push({
+        sessionId: record.sessionId,
+        sessionName: session?.name || 'Unknown Session',
+        courseName: course?.name || 'Unknown Course',
+        status: record.status,
+        timestamp: record.timestamp
+      });
+    }
+
+    const studentStats = Array.from(studentMap.values()).map(student => ({
+      ...student,
+      attendanceRate: student.totalSessions > 0 ? (student.attendedSessions / student.totalSessions) * 100 : 0
+    }));
+
+    res.json(studentStats);
+  } catch (error) {
+    console.error('Student stats error:', error);
+    res.status(500).json({ error: 'Failed to get student statistics' });
+  }
+});
+
+app.get('/api/reports/time-stats', authenticateToken, async (req: any, res: any) => {
+  try {
+    const allRecords = await db.getAllAttendanceRecords();
+    const allSessions = await db.getAllSessions();
+    
+    // 按日期分组
+    const dateMap = new Map();
+    
+    for (const session of allSessions) {
+      const date = new Date(session.startTime).toISOString().split('T')[0];
+      if (!dateMap.has(date)) {
+        dateMap.set(date, {
+          date,
+          sessions: 0,
+          attendance: 0,
+          totalPossible: 0
+        });
+      }
+      
+      const dayStat = dateMap.get(date);
+      dayStat.sessions++;
+      
+      const sessionRecords = allRecords.filter((r: any) => r.sessionId === session.id);
+      dayStat.attendance += sessionRecords.filter((r: any) => r.status === 'present').length;
+      dayStat.totalPossible += sessionRecords.length;
+    }
+
+    const trends = Array.from(dateMap.values()).map(day => ({
+      date: day.date,
+      sessions: day.sessions,
+      attendance: day.attendance,
+      rate: day.totalPossible > 0 ? (day.attendance / day.totalPossible) * 100 : 0
+    })).sort((a, b) => a.date.localeCompare(b.date));
+
+    const totalSessions = allSessions.length;
+    const totalAttendance = allRecords.filter((r: any) => r.status === 'present').length;
+    const averageRate = allRecords.length > 0 ? (totalAttendance / allRecords.length) * 100 : 0;
+
+    res.json({
+      period: 'All Time',
+      totalSessions,
+      totalAttendance,
+      averageRate,
+      trends
+    });
+  } catch (error) {
+    console.error('Time stats error:', error);
+    res.status(500).json({ error: 'Failed to get time statistics' });
   }
 });
 

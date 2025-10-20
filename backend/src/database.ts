@@ -403,6 +403,43 @@ class Database {
       averageAttendanceRate
     };
   }
+
+  // 获取所有出勤记录
+  async getAllAttendanceRecords(): Promise<AttendanceRecord[]> {
+    await this.connect();
+    const records = await AttendanceRecordModel.find();
+
+    return records.map(record => {
+      const result: AttendanceRecord = {
+        id: record.id,
+        sessionId: record.sessionId,
+        studentAddress: record.studentAddress,
+        status: record.status,
+        timestamp: record.timestamp.getTime()
+      };
+
+      if (record.tokenId) result.tokenId = record.tokenId;
+      if (record.txHash) result.txHash = record.txHash;
+
+      return result;
+    });
+  }
+
+  // 获取所有会话
+  async getAllSessions(): Promise<Session[]> {
+    await this.connect();
+    const sessions = await SessionModel.find();
+
+    return sessions.map(session => ({
+      id: session.id,
+      courseId: session.courseId,
+      name: session.name,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      createdAt: session.createdAt.getTime(),
+      updatedAt: session.updatedAt.getTime()
+    }));
+  }
 }
 
 export const db = new Database();
