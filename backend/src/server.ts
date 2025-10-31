@@ -55,17 +55,20 @@ app.post("/auth/login", async (req: any, res: any) => {
       return res.status(401).json({ error: "Invalid signature" });
     }
 
-    // 确定用户角色
-    const ownerAddress = process.env.OWNER_PRIVATE_KEY ? 
-      new ethers.Wallet(process.env.OWNER_PRIVATE_KEY).address : '';
+    // 确定用户角色（若未配置 OWNER_PRIVATE_KEY，默认使用 Hardhat 本地链的 Account #0 私钥）
+    const DEFAULT_HARDHAT_OWNER_PK = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    const ownerPkForRole = process.env.OWNER_PRIVATE_KEY && process.env.OWNER_PRIVATE_KEY.trim() !== ''
+      ? process.env.OWNER_PRIVATE_KEY
+      : DEFAULT_HARDHAT_OWNER_PK;
+    const ownerAddress = new ethers.Wallet(ownerPkForRole).address;
     const role = isTeacher(address, ownerAddress) ? 'teacher' : 'student';
 
     // 创建或更新用户
-    let user = db.getUser(address);
+    let user = await db.getUser(address);
     if (!user) {
-      user = db.createUser({ address, role });
+      user = await db.createUser({ address, role });
     } else {
-      user = db.updateUser(address, { role });
+      user = await db.updateUser(address, { role });
     }
 
     // 生成JWT token
@@ -87,14 +90,14 @@ app.get("/auth/me", authenticateToken, (req: any, res: any) => {
 
 // ===== 课程管理 API =====
 // 创建课程
-app.post("/api/courses", authenticateToken, requireTeacher, (req: any, res: any) => {
+app.post("/api/courses", authenticateToken, requireTeacher, async (req: any, res: any) => {
   try {
     const { name, description } = req.body;
     if (!name || typeof name !== "string") {
       return res.status(400).json({ error: "Course name is required" });
     }
 
-    const course = db.createCourse({
+    const course = await db.createCourse({
       name,
       description,
       teacherAddress: req.user!.address
@@ -107,11 +110,11 @@ app.post("/api/courses", authenticateToken, requireTeacher, (req: any, res: any)
 });
 
 // 获取课程列表
-app.get("/api/courses", authenticateToken, (req: any, res: any) => {
+app.get("/api/courses", authenticateToken, async (req: any, res: any) => {
   try {
     const courses = req.user!.role === 'teacher' 
-      ? db.getCoursesByTeacher(req.user!.address)
-      : db.getAllCourses();
+      ? await db.getCoursesByTeacher(req.user!.address)
+      : await db.getAllCourses();
     res.json(courses);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -119,9 +122,9 @@ app.get("/api/courses", authenticateToken, (req: any, res: any) => {
 });
 
 // 获取单个课程
-app.get("/api/courses/:id", authenticateToken, (req: any, res: any) => {
+app.get("/api/courses/:id", authenticateToken, async (req: any, res: any) => {
   try {
-    const course = db.getCourse(req.params.id!);
+    const course = await db.getCourse(req.params.id!);
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
@@ -132,9 +135,9 @@ app.get("/api/courses/:id", authenticateToken, (req: any, res: any) => {
 });
 
 // 更新课程
-app.put("/api/courses/:id", authenticateToken, requireTeacher, (req: any, res: any) => {
+app.put("/api/courses/:id", authenticateToken, requireTeacher, async (req: any, res: any) => {
   try {
-    const course = db.getCourse(req.params.id!);
+    const course = await db.getCourse(req.params.id!);
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
@@ -142,7 +145,7 @@ app.put("/api/courses/:id", authenticateToken, requireTeacher, (req: any, res: a
       return res.status(403).json({ error: "Not authorized to update this course" });
     }
 
-    const updatedCourse = db.updateCourse(req.params.id!, req.body);
+    const updatedCourse = await db.updateCourse(req.params.id!, req.body);
     res.json(updatedCourse);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -150,9 +153,9 @@ app.put("/api/courses/:id", authenticateToken, requireTeacher, (req: any, res: a
 });
 
 // 删除课程
-app.delete("/api/courses/:id", authenticateToken, requireTeacher, (req: any, res: any) => {
+app.delete("/api/courses/:id", authenticateToken, requireTeacher, async (req: any, res: any) => {
   try {
-    const course = db.getCourse(req.params.id!);
+    const course = await db.getCourse(req.params.id!);
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
@@ -160,7 +163,7 @@ app.delete("/api/courses/:id", authenticateToken, requireTeacher, (req: any, res
       return res.status(403).json({ error: "Not authorized to delete this course" });
     }
 
-    const success = db.deleteCourse(req.params.id!);
+    const success = await db.deleteCourse(req.params.id!);
     res.json({ success });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -169,27 +172,26 @@ app.delete("/api/courses/:id", authenticateToken, requireTeacher, (req: any, res
 
 // ===== 课次管理 API =====
 // 创建课次
-app.post("/api/courses/:courseId/sessions", authenticateToken, requireTeacher, (req: any, res: any) => {
+app.post("/api/courses/:courseId/sessions", authenticateToken, requireTeacher, async (req: any, res: any) => {
   try {
     const { courseId } = req.params;
     const { name, description, startTime, endTime } = req.body;
 
-    const course = db.getCourse(courseId!);
+    const course = await db.getCourse(courseId!);
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
-    if (course.teacherAddress !== req.user!.address) {
+    if (course.teacherAddress.toLowerCase() !== req.user!.address.toLowerCase()) {
       return res.status(403).json({ error: "Not authorized to create sessions for this course" });
     }
 
-    if (!name || typeof startTime !== "number" || typeof endTime !== "number" || endTime <= startTime) {
+    if (typeof startTime !== "number" || typeof endTime !== "number" || endTime <= startTime) {
       return res.status(400).json({ error: "Invalid session data" });
     }
 
-    const session = db.createSession({
+    const session = await db.createSession({
       courseId: courseId!,
-      name,
-      description,
+      // 名称由数据库层在缺省时自动填充：如 “第N次课”
       startTime,
       endTime
     });
@@ -201,9 +203,9 @@ app.post("/api/courses/:courseId/sessions", authenticateToken, requireTeacher, (
 });
 
 // 获取课次列表
-app.get("/api/courses/:courseId/sessions", authenticateToken, (req: any, res: any) => {
+app.get("/api/courses/:courseId/sessions", authenticateToken, async (req: any, res: any) => {
   try {
-    const sessions = db.getSessionsByCourse(req.params.courseId!);
+    const sessions = await db.getSessionsByCourse(req.params.courseId!);
     res.json(sessions);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -211,9 +213,9 @@ app.get("/api/courses/:courseId/sessions", authenticateToken, (req: any, res: an
 });
 
 // 获取单个课次
-app.get("/api/sessions/:id", authenticateToken, (req: any, res: any) => {
+app.get("/api/sessions/:id", authenticateToken, async (req: any, res: any) => {
   try {
-    const session = db.getSession(req.params.id!);
+    const session = await db.getSession(req.params.id!);
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
@@ -227,7 +229,8 @@ app.get("/api/sessions/:id", authenticateToken, (req: any, res: any) => {
 // 学生签到（后端代签，MVP）
 const rpcUrl = process.env.RPC_URL || "http://127.0.0.1:8545";
 const ownerPk = process.env.OWNER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-const contractAddress = process.env.CONTRACT_ADDRESS || "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+// 默认使用首笔部署的确定性地址，避免与前端不一致导致 500
+const contractAddress = process.env.CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 const attendanceAbi = [
   {
@@ -257,13 +260,13 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
     }
 
     // 检查课次是否存在
-    const session = db.getSession(sessionId.toString());
+    const session = await db.getSession(sessionId.toString());
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
 
     // 检查是否已经签到
-    const existingRecords = db.getAttendanceBySession(sessionId.toString());
+    const existingRecords = await db.getAttendanceBySession(sessionId.toString());
     const alreadyCheckedIn = existingRecords.some((record: any) => 
       record.studentAddress.toLowerCase() === studentAddress.toLowerCase()
     );
@@ -285,7 +288,7 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
     const receipt = await tx.wait();
 
     // 记录出勤
-    const attendanceRecord = db.createAttendanceRecord({
+    const attendanceRecord = await db.createAttendanceRecord({
       sessionId: sessionId.toString(),
       studentAddress,
       tokenId: receipt.logs?.[0]?.topics?.[3] || undefined,
@@ -304,15 +307,15 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
 });
 
 // 获取出勤记录
-app.get("/api/attendance/records", authenticateToken, (req: any, res: any) => {
+app.get("/api/attendance/records", authenticateToken, async (req: any, res: any) => {
   try {
     const { sessionId, studentAddress } = req.query;
     
     let records: any[];
     if (sessionId) {
-      records = db.getAttendanceBySession(sessionId as string);
+      records = await db.getAttendanceBySession(sessionId as string);
     } else if (studentAddress) {
-      records = db.getAttendanceByStudent(studentAddress as string);
+      records = await db.getAttendanceByStudent(studentAddress as string);
     } else {
       // 根据用户角色返回相应记录
       if (req.user!.role === 'teacher') {
@@ -320,7 +323,7 @@ app.get("/api/attendance/records", authenticateToken, (req: any, res: any) => {
         records = [];
       } else {
         // 学生只能看到自己的记录
-        records = db.getAttendanceByStudent(req.user!.address);
+        records = await db.getAttendanceByStudent(req.user!.address);
       }
     }
 
@@ -331,9 +334,9 @@ app.get("/api/attendance/records", authenticateToken, (req: any, res: any) => {
 });
 
 // 获取出勤统计
-app.get("/api/attendance/stats/:sessionId", authenticateToken, (req: any, res: any ) => {
+app.get("/api/attendance/stats/:sessionId", authenticateToken, async (req: any, res: any ) => {
   try {
-    const stats = db.getSessionStats(req.params.sessionId!);
+    const stats = await db.getSessionStats(req.params.sessionId!);
     res.json(stats);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -341,9 +344,9 @@ app.get("/api/attendance/stats/:sessionId", authenticateToken, (req: any, res: a
 });
 
 // 获取课程出勤统计
-app.get("/api/courses/:courseId/stats", authenticateToken, (req: any, res: any ) => {
+app.get("/api/courses/:courseId/stats", authenticateToken, async (req: any, res: any ) => {
   try {
-    const stats = db.getCourseStats(req.params.courseId!);
+    const stats = await db.getCourseStats(req.params.courseId!);
     res.json(stats);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

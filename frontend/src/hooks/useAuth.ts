@@ -61,6 +61,9 @@ export function useAuth() {
       if (data.token) {
         setToken(data.token);
         localStorage.setItem('auth_token', data.token);
+        if (address) {
+          localStorage.setItem('auth_address', address);
+        }
         console.log('登录成功，获得token');
         return data;
       } else {
@@ -78,6 +81,7 @@ export function useAuth() {
   const logout = () => {
     setToken(null);
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_address');
   };
 
   // 获取认证头
@@ -102,6 +106,14 @@ export function useAuth() {
       logout();
     }
   }, [isConnected]);
+
+  // 当钱包地址切换时，若与上次登录地址不一致，清除 token 以强制重新登录
+  useEffect(() => {
+    const savedAddress = localStorage.getItem('auth_address');
+    if (address && savedAddress && savedAddress.toLowerCase() !== address.toLowerCase()) {
+      logout();
+    }
+  }, [address]);
 
   return {
     address,

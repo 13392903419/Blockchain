@@ -135,11 +135,27 @@ export function CourseManager() {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <label>选择课程：</label>
-        <select value={selectedCourse} onChange={e=>setSelectedCourse(e.target.value)}>
-          <option value=''>-- 请选择 --</option>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <div style={{ marginBottom: 8 }}>课程清单（便于对应课程ID与名称）：</div>
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {courses.map(c => (
+            <li key={c.id}>
+              <span>课程ID: {c.id}</span>
+              <span style={{ marginLeft: 8 }}>课程名: {c.name}</span>
+              {c.description ? <span style={{ marginLeft: 8, color:'#666' }}>（{c.description}）</span> : null}
+            </li>
+          ))}
+        </ul>
+
+        <div style={{ marginTop: 12 }}>
+          <label>选择课程：</label>
+          <select value={selectedCourse} onChange={e=>setSelectedCourse(e.target.value)}>
+            <option value=''>-- 请选择 --</option>
+            {courses.map(c => <option key={c.id} value={c.id}>{c.name}（ID: {c.id.slice(-6)}）</option>)}
+          </select>
+          {selectedCourse && (
+            <span style={{ marginLeft: 8, color:'#333' }}>已选课程ID: {selectedCourse}</span>
+          )}
+        </div>
       </div>
 
       <div style={{ marginTop: 16 }}>
@@ -155,9 +171,16 @@ export function CourseManager() {
       <div style={{ marginTop: 16 }}>
         <div>课次列表：</div>
         <ul>
-          {sessions.map(s => (
-            <li key={s.id}>#{s.id.slice(-6)} 时间：{new Date(s.startTime).toLocaleString()} - {new Date(s.endTime).toLocaleString()}</li>
-          ))}
+          {sessions.map(s => {
+            const selected = courses.find(c => c.id === selectedCourse);
+            const courseName = selected ? selected.name : '';
+            return (
+              <li key={s.id}>
+                {courseName ? `${courseName} ` : ''}
+                #{s.id} 时间：{new Date(s.startTime).toLocaleString()} - {new Date(s.endTime).toLocaleString()}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

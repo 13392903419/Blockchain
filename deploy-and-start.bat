@@ -14,6 +14,16 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8545 ^| findstr LISTENING') 
 )
 echo 端口检查完成。
 echo.
+
+echo.
+echo 预处理: 检测 4000 端口占用并尝试释放...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4000 ^| findstr LISTENING') do (
+    echo 发现占用 4000 的进程 PID=%%a ，正在结束...
+    taskkill /PID %%a /F > nul 2>&1
+)
+echo 端口检查完成。
+echo.
+
 echo 步骤 1: 启动区块链网络...
 start "Hardhat Node" cmd /k "chcp 65001>nul & cd /d %~dp0blockchain && npx hardhat node"
 

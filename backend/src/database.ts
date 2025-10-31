@@ -1,8 +1,24 @@
 import mongoose from 'mongoose';
 import type { Course, Session, AttendanceRecord, User, AttendanceStats, CourseStats } from './types';
+// 自增序列表，用于为会话生成全局递增的数字ID
+const counterSchema = new mongoose.Schema({
+  _id: { type: String },
+  seq: { type: Number, default: 0 }
+});
+const CounterModel = mongoose.model('Counter', counterSchema);
+
+async function getNextSequence(key: string): Promise<number> {
+  const doc = await CounterModel.findByIdAndUpdate(
+    key,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return doc!.seq;
+}
 
 // MongoDB 模型定义
 const courseSchema = new mongoose.Schema({
+  _id: { type: String },
   name: { type: String, required: true },
   description: { type: String, default: '' },
   teacherAddress: { type: String, required: true },
@@ -11,6 +27,7 @@ const courseSchema = new mongoose.Schema({
 });
 
 const sessionSchema = new mongoose.Schema({
+  _id: { type: String },
   courseId: { type: String, required: true },
   name: { type: String, required: true },
   description: { type: String, default: '' },
@@ -21,6 +38,7 @@ const sessionSchema = new mongoose.Schema({
 });
 
 const attendanceRecordSchema = new mongoose.Schema({
+  _id: { type: String },
   sessionId: { type: String, required: true },
   studentAddress: { type: String, required: true },
   tokenId: { type: String },
@@ -71,8 +89,9 @@ class Database {
     const id = `course_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const newCourse = await CourseModel.create({
+      _id: id,
       ...course,
-      id,
+      teacherAddress: course.teacherAddress.toLowerCase(),
     });
 
     return {
@@ -87,7 +106,7 @@ class Database {
 
   async getCourse(id: string): Promise<Course | undefined> {
     await this.connect();
-    const course = await CourseModel.findOne({ id });
+    const course = await CourseModel.findOne({ _id: id });
     if (!course) return undefined;
 
     return {
@@ -102,7 +121,9 @@ class Database {
 
   async getCoursesByTeacher(teacherAddress: string): Promise<Course[]> {
     await this.connect();
-    const courses = await CourseModel.find({ teacherAddress: teacherAddress.toLowerCase() });
+    // 使用不区分大小写的精确匹配，兼容历史数据大小写不一致
+    const exactInsensitive = new RegExp(`^${teacherAddress}$`, 'i');
+    const courses = await CourseModel.find({ teacherAddress: exactInsensitive });
 
     return courses.map(course => ({
       id: course.id,
@@ -131,7 +152,7 @@ class Database {
   async updateCourse(id: string, updates: Partial<Omit<Course, 'id' | 'createdAt' | 'teacherAddress'>>): Promise<Course | undefined> {
     await this.connect();
     const course = await CourseModel.findOneAndUpdate(
-      { id },
+      { _id: id },
       { ...updates, updatedAt: new Date() },
       { new: true }
     );
@@ -150,18 +171,24 @@ class Database {
 
   async deleteCourse(id: string): Promise<boolean> {
     await this.connect();
-    const result = await CourseModel.deleteOne({ id });
+    const result = await CourseModel.deleteOne({ _id: id });
     return result.deletedCount > 0;
   }
 
   // Session CRUD - MongoDB版本
-  async createSession(session: Omit<Session, 'id' | 'createdAt'>): Promise<Session> {
+  async createSession(session: Partial<Omit<Session, 'id' | 'createdAt'>> & { courseId: string; startTime: number; endTime: number }): Promise<Session> {
     await this.connect();
-    const id = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // 生成全局递增的数字ID（从1开始），并将其作为字符串保存为 _id
+    const numericId = await getNextSequence('session');
+    const id = String(numericId);
 
     const newSession = await SessionModel.create({
-      ...session,
-      id,
+      _id: id,
+      courseId: session.courseId,
+      name: session.name ?? `第${numericId}次课`,
+      description: session.description ?? '',
+      startTime: session.startTime,
+      endTime: session.endTime,
     });
 
     return {
@@ -177,7 +204,7 @@ class Database {
 
   async getSession(id: string): Promise<Session | undefined> {
     await this.connect();
-    const session = await SessionModel.findOne({ id });
+    const session = await SessionModel.findOne({ _id: id });
     if (!session) return undefined;
 
     return {
@@ -209,7 +236,7 @@ class Database {
   async updateSession(id: string, updates: Partial<Omit<Session, 'id' | 'createdAt' | 'courseId'>>): Promise<Session | undefined> {
     await this.connect();
     const session = await SessionModel.findOneAndUpdate(
-      { id },
+      { _id: id },
       { ...updates },
       { new: true }
     );
@@ -229,7 +256,7 @@ class Database {
 
   async deleteSession(id: string): Promise<boolean> {
     await this.connect();
-    const result = await SessionModel.deleteOne({ id });
+    const result = await SessionModel.deleteOne({ _id: id });
     return result.deletedCount > 0;
   }
 
@@ -239,8 +266,9 @@ class Database {
     const id = `attendance_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const newRecord = await AttendanceRecordModel.create({
+      _id: id,
       ...record,
-      id,
+      studentAddress: record.studentAddress.toLowerCase(),
     });
 
     const result: AttendanceRecord = {
@@ -259,7 +287,7 @@ class Database {
 
   async getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined> {
     await this.connect();
-    const record = await AttendanceRecordModel.findOne({ id });
+    const record = await AttendanceRecordModel.findOne({ _id: id });
     if (!record) return undefined;
 
     const result: AttendanceRecord = {
@@ -320,7 +348,11 @@ class Database {
   async createUser(user: Omit<User, 'createdAt'>): Promise<User> {
     await this.connect();
 
-    const newUser = await UserModel.create(user);
+    // 统一以小写地址存储，避免大小写导致的唯一索引冲突
+    const newUser = await UserModel.create({
+      ...user,
+      address: user.address.toLowerCase()
+    });
 
     return {
       address: newUser.address,
