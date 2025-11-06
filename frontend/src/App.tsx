@@ -9,6 +9,7 @@ import { StudentCheckin } from './components/StudentCheckin'
 import { AttendanceRecords } from './components/AttendanceRecords'
 import { AttendanceReports } from './components/AttendanceReports'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Navbar } from './components/Navbar'
 
 const config = createConfig({
   chains: [localhost],
@@ -46,26 +47,50 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config} reconnectOnMount>
-        <div style={{ padding: 24 }}>
-          <h1>NFT 出勤 DApp</h1>
-          <ConnectWallet />
-          <div style={{ marginTop: 16 }}>
-            <AttendanceStatus />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <TeacherBatchMint />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <StudentCheckin />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <CourseManager />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <AttendanceRecords />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <AttendanceReports />
+        <div>
+          <Navbar />
+          <div className="page">
+            <div className="section" id="section-header">
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 0' }}>
+                <h1 style={{ margin: 0 }}>NFT 出勤 DApp</h1>
+                <ConnectWallet />
+              </div>
+            </div>
+
+            <div className="grid-two">
+              <div className="section card" id="section-status">
+                <h2>概览</h2>
+                <AttendanceStatus />
+              </div>
+
+              <div className="section card" id="section-checkin">
+                <h2>学生签到</h2>
+                <StudentCheckin />
+              </div>
+            </div>
+
+            <div className="grid-two">
+              <div className="section card" id="section-teacher">
+                <h2>教师工具</h2>
+                <TeacherBatchMint />
+              </div>
+
+              <div className="section card" id="section-courses">
+                <h2>课程管理</h2>
+                <CourseManager />
+              </div>
+            </div>
+
+            <div className="grid-two">
+              <div className="section card" id="section-records">
+                <h2>出勤记录</h2>
+                <AttendanceRecords />
+              </div>
+              <div className="section card" id="section-reports">
+                <h2>统计报表</h2>
+                <AttendanceReports />
+              </div>
+            </div>
           </div>
         </div>
       </WagmiProvider>
