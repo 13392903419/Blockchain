@@ -3,9 +3,24 @@ import { useAccount } from 'wagmi';
 
 const API = 'http://localhost:4000';
 
+// JWT token 解析函数
+function parseJwt(token: string) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+}
+
 export function useAuth() {
   const { address, isConnected } = useAccount();
   const [token, setToken] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<'teacher' | 'student' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // 获取签名挑战
@@ -64,7 +79,15 @@ export function useAuth() {
         if (address) {
           localStorage.setItem('auth_address', address);
         }
-        console.log('登录成功，获得token');
+
+        // 解析token获取用户角色
+        const tokenData = parseJwt(data.token);
+        if (tokenData && tokenData.role) {
+          setUserRole(tokenData.role);
+          localStorage.setItem('user_role', tokenData.role);
+        }
+
+        console.log('登录成功，获得token，角色:', tokenData?.role);
         return data;
       } else {
         throw new Error('登录响应中没有token');
@@ -80,8 +103,12 @@ export function useAuth() {
   // 登出
   const logout = () => {
     setToken(null);
+    setUserRole(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_address');
+    localStorage.removeItem('user_role');
+    // 重定向到登录页面
+    window.location.reload();
   };
 
   // 获取认证头
@@ -92,11 +119,21 @@ export function useAuth() {
     };
   };
 
-  // 检查本地存储的 token
+  // 检查本地存储的 token 和角色
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token');
+    const savedRole = localStorage.getItem('user_role');
+
     if (savedToken) {
       setToken(savedToken);
+      // 尝试解析token获取角色
+      const tokenData = parseJwt(savedToken);
+      if (tokenData && tokenData.role) {
+        setUserRole(tokenData.role);
+      } else if (savedRole) {
+        // 如果token解析失败，使用本地存储的角色
+        setUserRole(savedRole as 'teacher' | 'student');
+      }
     }
   }, []);
 
@@ -119,6 +156,7 @@ export function useAuth() {
     address,
     isConnected,
     token,
+    userRole,
     isLoading,
     login,
     logout,

@@ -6,7 +6,11 @@ type Session = { id: string; courseId: string; startTime: number; endTime: numbe
 
 const API = 'http://localhost:4000'
 
-export function CourseManager() {
+interface CourseManagerProps {
+  onCourseUpdate?: () => void
+}
+
+export function CourseManager({ onCourseUpdate }: CourseManagerProps) {
   const { isAuthenticated, getAuthHeaders, login } = useAuth()
   const [courses, setCourses] = useState<Course[]>([])
   const [name, setName] = useState('')
@@ -75,6 +79,11 @@ export function CourseManager() {
       setDescription('')
       await loadCourses()
       setSelectedCourse(c.id)
+
+      // 调用回调函数更新统计数据
+      if (onCourseUpdate) {
+        onCourseUpdate()
+      }
     } catch (error: any) {
       console.error('创建课程失败:', error)
       alert(`创建课程失败: ${error.message}`)

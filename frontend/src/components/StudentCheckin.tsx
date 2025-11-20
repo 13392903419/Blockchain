@@ -4,7 +4,11 @@ import { useAuth } from '../hooks/useAuth'
 
 const API = 'http://localhost:4000'
 
-export function StudentCheckin() {
+interface StudentCheckinProps {
+  onCheckinSuccess?: () => void
+}
+
+export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
   const { address, isConnected } = useAccount()
   const { isAuthenticated, getAuthHeaders, login } = useAuth()
   const [sessionId, setSessionId] = useState<string>('1')
@@ -37,6 +41,11 @@ export function StudentCheckin() {
       const data = await response.json()
       setResult(`✅ 签到成功！交易哈希: ${data.hash}`)
       console.log('签到成功:', data)
+
+      // 调用成功回调，刷新统计数据
+      if (onCheckinSuccess) {
+        onCheckinSuccess()
+      }
     } catch (e: any) {
       console.error('签到失败:', e)
       setResult(`❌ 签到失败: ${e.message}`)
