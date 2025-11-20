@@ -26,7 +26,7 @@ git add todolist
 
 echo.
 echo 2. Committing changes...
-git commit -m "finished the attendance system, begin to adjust UI"
+git commit -m "finished 1.0.0 version"
 
 if %errorlevel% neq 0 (
     echo Git commit failed!
