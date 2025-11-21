@@ -2,3 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { AttendanceNFT } from "./AttendanceNFT";
+export type { RoleManager } from "./RoleManager";

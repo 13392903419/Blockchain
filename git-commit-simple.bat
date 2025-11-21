@@ -26,7 +26,7 @@ git add todolist
 
 echo.
 echo 2. Committing changes...
-git commit -m "finished 1.0.0 version"
+git commit -m "fix the issue of ID"
 
 if %errorlevel% neq 0 (
     echo Git commit failed!

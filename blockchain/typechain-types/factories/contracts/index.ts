@@ -2,3 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export { AttendanceNFT__factory } from "./AttendanceNFT__factory";
+export { RoleManager__factory } from "./RoleManager__factory";
