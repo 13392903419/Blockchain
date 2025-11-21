@@ -7,7 +7,7 @@ import { AttendanceStatus } from './AttendanceStatus'
 type StudentTab = 'overview' | 'checkin' | 'records'
 
 export function StudentDashboard() {
-  const { address, userRole, logout, getAuthHeaders } = useAuth()
+  const { address, userRole, logout, getAuthHeaders, token } = useAuth()
   const [activeTab, setActiveTab] = useState<StudentTab>('overview')
   const [studentStats, setStudentStats] = useState({
     todayCheckin: '--',
@@ -25,35 +25,76 @@ export function StudentDashboard() {
   // 获取学生统计数据
   const fetchStudentStats = async () => {
     try {
+      console.log('开始获取学生统计数据...')
+      console.log('当前认证状态 - token:', !!token, 'userRole:', userRole, 'address:', address)
+
+      // 检查localStorage中的token
+      const savedToken = localStorage.getItem('auth_token')
+      const savedRole = localStorage.getItem('user_role')
+      console.log('localStorage状态:', { savedToken: !!savedToken, savedRole })
+
+      const headers = getAuthHeaders()
+      console.log('请求头:', headers)
+
       const response = await fetch('http://localhost:4000/api/reports/student-stats', {
-        headers: getAuthHeaders()
+        headers: headers
       })
+
+      console.log('学生统计响应:', response.status)
 
       if (response.ok) {
         const allStats = await response.json()
-        const myStats = allStats.find((stat: any) => stat.studentAddress.toLowerCase() === address?.toLowerCase())
+        console.log('所有学生统计:', allStats)
+
+        const myStats = allStats.find((stat: any) =>
+          stat.studentAddress.toLowerCase() === address?.toLowerCase()
+        )
+
+        console.log('我的统计:', myStats)
 
         if (myStats) {
           // 计算今日签到
           const today = new Date().toDateString()
-          const todayCheckins = myStats.attendanceHistory.filter((record: any) =>
-            new Date(record.timestamp).toDateString() === today && record.status === 'present'
-          ).length
+          console.log('今日日期:', today)
+
+          const todayCheckins = myStats.attendanceHistory.filter((record: any) => {
+            const recordDate = new Date(record.timestamp).toDateString()
+            console.log('记录日期:', recordDate, '状态:', record.status)
+            return recordDate === today && record.status === 'present'
+          }).length
 
           // 计算NFT数量（假设每个出勤记录对应一个NFT）
           const nftCount = myStats.attendanceHistory.filter((record: any) =>
             record.status === 'present'
           ).length
 
+          console.log('计算结果:', { todayCheckins, attendanceRate: myStats.attendanceRate, nftCount })
+
           setStudentStats({
             todayCheckin: todayCheckins.toString(),
             attendanceRate: `${myStats.attendanceRate.toFixed(1)}%`,
             nftCount: nftCount.toString()
           })
+        } else {
+          console.log('未找到我的统计数据')
+          setStudentStats({
+            todayCheckin: '0',
+            attendanceRate: '0.0%',
+            nftCount: '0'
+          })
         }
+      } else {
+        console.error('获取学生统计失败:', response.status)
+        const errorText = await response.text()
+        console.error('错误详情:', errorText)
       }
     } catch (error) {
       console.error('获取统计数据失败:', error)
+      setStudentStats({
+        todayCheckin: '0',
+        attendanceRate: '0.0%',
+        nftCount: '0'
+      })
     } finally {
       setLoadingStats(false)
     }
@@ -61,10 +102,13 @@ export function StudentDashboard() {
 
   // 组件加载时获取数据
   useEffect(() => {
-    if (address) {
+    if (address && token && userRole) {
+      console.log('触发获取学生统计数据 - address:', address, 'token:', !!token, 'userRole:', userRole)
       fetchStudentStats()
+    } else {
+      console.log('跳过获取统计数据 - 条件不满足:', { address: !!address, token: !!token, userRole })
     }
-  }, [address])
+  }, [address, token, userRole])
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -83,7 +127,7 @@ export function StudentDashboard() {
                   </p>
                   <p className="user-role">角色: {userRole === 'student' ? '学生' : '未知'}</p>
                 </div>
-                <button className="logout-btn" onClick={logout}>
+                <button className="logout-btn" onClick={() => logout()}>
                   退出登录
                 </button>
               </div>

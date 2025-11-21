@@ -74,21 +74,26 @@ export function useAuth() {
 
       const data = await response.json();
       if (data.token) {
+        // 立即设置状态，确保同步更新
+        const tokenData = parseJwt(data.token);
+        const role = tokenData?.role;
+
+        console.log('登录成功，获得token，角色:', role);
+
+        // 强制同步设置状态
         setToken(data.token);
+        setUserRole(role);
+
         localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_role', role);
         if (address) {
           localStorage.setItem('auth_address', address);
         }
 
-        // 解析token获取用户角色
-        const tokenData = parseJwt(data.token);
-        if (tokenData && tokenData.role) {
-          setUserRole(tokenData.role);
-          localStorage.setItem('user_role', tokenData.role);
-        }
-
-        console.log('登录成功，获得token，角色:', tokenData?.role);
-        return data;
+        // 确保状态已经设置后再返回
+        return new Promise(resolve => {
+          setTimeout(() => resolve(data), 100);
+        });
       } else {
         throw new Error('登录响应中没有token');
       }
@@ -107,33 +112,46 @@ export function useAuth() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_address');
     localStorage.removeItem('user_role');
-    // 重定向到登录页面
-    window.location.reload();
+    // 不使用reload，而是让React重新渲染到登录页面
   };
 
   // 获取认证头
   const getAuthHeaders = () => {
-    return {
+    const headers = {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
     };
+    console.log('getAuthHeaders called, token exists:', !!token, 'headers:', headers);
+    return headers;
   };
 
   // 检查本地存储的 token 和角色
   useEffect(() => {
+    console.log('useAuth useEffect triggered');
     const savedToken = localStorage.getItem('auth_token');
     const savedRole = localStorage.getItem('user_role');
 
+    console.log('Saved token exists:', !!savedToken);
+    console.log('Saved role:', savedRole);
+
     if (savedToken) {
+      console.log('Setting token and role from localStorage');
       setToken(savedToken);
+
       // 尝试解析token获取角色
       const tokenData = parseJwt(savedToken);
+      console.log('Parsed token data:', tokenData);
+
       if (tokenData && tokenData.role) {
         setUserRole(tokenData.role);
+        console.log('Set role from token:', tokenData.role);
       } else if (savedRole) {
         // 如果token解析失败，使用本地存储的角色
         setUserRole(savedRole as 'teacher' | 'student');
+        console.log('Set role from localStorage:', savedRole);
       }
+    } else {
+      console.log('No saved token found');
     }
   }, []);
 

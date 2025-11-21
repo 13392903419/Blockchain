@@ -29,6 +29,7 @@ const courseSchema = new mongoose.Schema({
 const sessionSchema = new mongoose.Schema({
   _id: { type: String },
   courseId: { type: String, required: true },
+  sessionNumber: { type: Number, required: true }, // 课程内的课次序号，用于显示
   name: { type: String, required: true },
   description: { type: String, default: '' },
   startTime: { type: Number, required: true },
@@ -178,14 +179,20 @@ class Database {
   // Session CRUD - MongoDB版本
   async createSession(session: Partial<Omit<Session, 'id' | 'createdAt'>> & { courseId: string; startTime: number; endTime: number }): Promise<Session> {
     await this.connect();
-    // 生成全局递增的数字ID（从1开始），并将其作为字符串保存为 _id
-    const numericId = await getNextSequence('session');
-    const id = String(numericId);
+    // 为每个课程生成独立的递增sessionNumber（从1开始）
+    // 查询该课程现有的最大sessionNumber，然后加1
+    const existingSessions = await SessionModel.find({ courseId: session.courseId }).sort({ sessionNumber: -1 }).limit(1);
+    const maxSessionNum = existingSessions.length > 0 ? Number(existingSessions[0].sessionNumber) || 0 : 0;
+    const sessionNum = maxSessionNum + 1;
+
+    // 使用复合ID格式：courseId-sessionNum，保证全局唯一性
+    const id = `${session.courseId}-${sessionNum}`;
 
     const newSession = await SessionModel.create({
       _id: id,
       courseId: session.courseId,
-      name: session.name ?? `第${numericId}次课`,
+      sessionNumber: sessionNum,
+      name: session.name ?? `第${sessionNum}次课`,
       description: session.description ?? '',
       startTime: session.startTime,
       endTime: session.endTime,
@@ -194,6 +201,7 @@ class Database {
     return {
       id: newSession.id,
       courseId: newSession.courseId,
+      sessionNumber: newSession.sessionNumber,
       name: newSession.name,
       startTime: newSession.startTime,
       endTime: newSession.endTime,
@@ -210,6 +218,7 @@ class Database {
     return {
       id: session.id,
       courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
@@ -225,6 +234,7 @@ class Database {
     return sessions.map(session => ({
       id: session.id,
       courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
@@ -246,6 +256,7 @@ class Database {
     return {
       id: session.id,
       courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
@@ -465,6 +476,7 @@ class Database {
     return sessions.map(session => ({
       id: session.id,
       courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,

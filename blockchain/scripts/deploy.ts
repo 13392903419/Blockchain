@@ -10,24 +10,27 @@ async function main() {
   const deployer = signers[0];
   console.log("Deployer:", await deployer.getAddress());
 
+  // 部署AttendanceNFT合约
+  console.log("Deploying AttendanceNFT...");
   const AttendanceNFT = await ethers.getContractFactory("AttendanceNFT");
-  const contract = await AttendanceNFT.deploy(deployer.address);
-  await contract.waitForDeployment();
+  const attendanceContract = await AttendanceNFT.deploy(deployer.address);
+  await attendanceContract.waitForDeployment();
 
-  const address = await contract.getAddress();
-  console.log("AttendanceNFT deployed to:", address);
-  // 地址一致性校验：确保本次部署地址为期望的固定地址（首笔交易确定性地址）
-  const EXPECTED_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-  if (address.toLowerCase() !== EXPECTED_ADDRESS.toLowerCase()) {
-    console.error(
-      `部署地址不一致：期望 ${EXPECTED_ADDRESS}，实际 ${address}。\n` +
-      "这通常表示本次部署不是该部署者在此链上的首笔交易（nonce 非 0），或链已存在历史交易。\n" +
-      "请确保：1) 重启本地链；2) 部署前不要让前端/其他脚本先发送交易；3) 使用 Account #0 作为部署者。"
-    );
-    process.exit(1);
-  }
-  console.log("请将以下地址复制到 frontend/.env.local:");
-  console.log(`VITE_CONTRACT_ADDRESS=${address}`);
+  const attendanceAddress = await attendanceContract.getAddress();
+  console.log("AttendanceNFT deployed to:", attendanceAddress);
+
+  console.log("");
+  console.log("🎉 合约部署成功！");
+  console.log("📋 请将以下合约地址复制到相应配置文件：");
+  console.log("");
+  console.log("AttendanceNFT合约地址:");
+  console.log(`${attendanceAddress}`);
+  console.log("");
+  console.log("配置文件位置：");
+  console.log("- frontend/.env.local: VITE_CONTRACT_ADDRESS=[合约地址]");
+  console.log("");
+  console.log("💡 这体现了真正的区块链原生应用：");
+  console.log("   合约地址由区块链网络动态决定，不依赖人工固定！");
 }
 
 main().catch((error) => {

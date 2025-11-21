@@ -9,7 +9,7 @@ import { TeacherBatchMint } from './TeacherBatchMint'
 type TeacherTab = 'overview' | 'courses' | 'records' | 'reports' | 'batch-mint'
 
 export function TeacherDashboard() {
-  const { address, userRole, logout, getAuthHeaders } = useAuth()
+  const { address, userRole, logout, getAuthHeaders, token } = useAuth()
   const [activeTab, setActiveTab] = useState<TeacherTab>('overview')
   const [teacherStats, setTeacherStats] = useState({
     totalCourses: '--',
@@ -29,13 +29,27 @@ export function TeacherDashboard() {
   // 获取教师统计数据
   const fetchTeacherStats = async () => {
     try {
+      console.log('开始获取教师统计数据...')
+      console.log('当前用户状态:', { userRole })
+
+      // 检查localStorage中的token
+      const savedToken = localStorage.getItem('auth_token')
+      const savedRole = localStorage.getItem('user_role')
+      console.log('localStorage状态:', { savedToken: !!savedToken, savedRole })
+
       // 首先获取教师的课程列表
+      const headers = getAuthHeaders()
+      console.log('发送请求头:', headers)
+
       const coursesResponse = await fetch('http://localhost:4000/api/courses', {
-        headers: getAuthHeaders()
+        headers: headers
       })
+
+      console.log('课程列表响应:', coursesResponse.status)
 
       if (coursesResponse.ok) {
         const teacherCourses = await coursesResponse.json()
+        console.log('教师课程:', teacherCourses)
 
         if (teacherCourses.length > 0) {
           // 计算总课程数
@@ -46,13 +60,18 @@ export function TeacherDashboard() {
             headers: getAuthHeaders()
           })
 
+          console.log('课程统计响应:', courseStatsResponse.status)
+
           if (courseStatsResponse.ok) {
             const allCourseStats = await courseStatsResponse.json()
+            console.log('所有课程统计:', allCourseStats)
 
             // 过滤出当前教师的课程统计
             const teacherCourseStats = allCourseStats.filter((courseStat: any) =>
               teacherCourses.some((course: any) => course.id === courseStat.courseId)
             )
+
+            console.log('教师课程统计:', teacherCourseStats)
 
             // 计算活跃学生数和平均出勤率
             const studentSet = new Set<string>()
@@ -60,14 +79,16 @@ export function TeacherDashboard() {
             let totalPossibleAttendance = 0
 
             teacherCourseStats.forEach((courseStat: any) => {
-              courseStat.attendanceRecords.forEach((record: any) => {
-                // 收集所有有出勤记录的学生（通过sessionId作为唯一标识）
-                if (record.presentCount > 0) {
-                  studentSet.add(`session_${record.sessionId}`)
-                }
-                totalAttendanceRecords += record.presentCount
-                totalPossibleAttendance += record.totalCount
-              })
+              if (courseStat.attendanceRecords) {
+                courseStat.attendanceRecords.forEach((record: any) => {
+                  // 收集所有有出勤记录的学生（通过sessionId作为唯一标识）
+                  if (record.presentCount > 0) {
+                    studentSet.add(`session_${record.sessionId}`)
+                  }
+                  totalAttendanceRecords += record.presentCount || 0
+                  totalPossibleAttendance += record.totalCount || 0
+                })
+              }
             })
 
             const activeStudents = studentSet.size
@@ -77,20 +98,34 @@ export function TeacherDashboard() {
               ? ((totalAttendanceRecords / totalPossibleAttendance) * 100).toFixed(1)
               : '0.0'
 
+            console.log('计算结果:', { totalCourses, activeStudents, averageAttendanceRate })
+
             setTeacherStats({
               totalCourses: totalCourses.toString(),
               activeStudents: activeStudents.toString(),
               averageAttendanceRate: `${averageAttendanceRate}%`
             })
+          } else {
+            console.error('获取课程统计失败')
+            setTeacherStats({
+              totalCourses: totalCourses.toString(),
+              activeStudents: '0',
+              averageAttendanceRate: '0.0%'
+            })
           }
         } else {
           // 没有课程
+          console.log('教师没有课程')
           setTeacherStats({
             totalCourses: '0',
             activeStudents: '0',
             averageAttendanceRate: '0.0%'
           })
         }
+      } else {
+        console.error('获取课程列表失败:', coursesResponse.status)
+        const errorText = await coursesResponse.text()
+        console.error('错误详情:', errorText)
       }
     } catch (error) {
       console.error('获取教师统计数据失败:', error)
@@ -106,10 +141,13 @@ export function TeacherDashboard() {
 
   // 组件加载时获取数据
   useEffect(() => {
-    if (address) {
+    if (address && token && userRole) {
+      console.log('触发获取教师统计数据 - address:', address, 'token:', !!token, 'userRole:', userRole)
       fetchTeacherStats()
+    } else {
+      console.log('跳过获取教师统计数据 - 条件不满足:', { address: !!address, token: !!token, userRole })
     }
-  }, [address])
+  }, [address, token, userRole])
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -128,7 +166,7 @@ export function TeacherDashboard() {
                   </p>
                   <p className="user-role">角色: {userRole === 'teacher' ? '教师' : '未知'}</p>
                 </div>
-                <button className="logout-btn" onClick={logout}>
+                <button className="logout-btn" onClick={() => logout()}>
                   退出登录
                 </button>
               </div>

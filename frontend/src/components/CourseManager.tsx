@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
 type Course = { id: string; name: string; description?: string }
-type Session = { id: string; courseId: string; startTime: number; endTime: number }
+type Session = { id: string; courseId: string; sessionNumber: number; name: string; startTime: number; endTime: number }
 
 const API = 'http://localhost:4000'
 
@@ -186,7 +186,7 @@ export function CourseManager({ onCourseUpdate }: CourseManagerProps) {
             return (
               <li key={s.id}>
                 {courseName ? `${courseName} ` : ''}
-                #{s.id} 时间：{new Date(s.startTime).toLocaleString()} - {new Date(s.endTime).toLocaleString()}
+                #{s.sessionNumber} 时间：{new Date(s.startTime).toLocaleString()} - {new Date(s.endTime).toLocaleString()}
               </li>
             );
           })}

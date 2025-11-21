@@ -13,7 +13,6 @@ const config = createConfig({
   connectors: [injected()],
   transports: {
     [localhost.id]: http('http://127.0.0.1:8545')
-    
   },
   ssr: false
 })
@@ -21,19 +20,28 @@ const config = createConfig({
 function AppContent() {
   const { isAuthenticated, userRole } = useAuth()
 
+  console.log('AppContent render - isAuthenticated:', isAuthenticated, 'userRole:', userRole)
+
+  // 使用认证状态作为key，强制组件在认证状态改变时重新挂载
+  const authKey = `${isAuthenticated}-${userRole || 'none'}`
+
   // 未认证用户显示登录页面
   if (!isAuthenticated || !userRole) {
-    return <LoginPage />
+    console.log('Showing login page')
+    return <LoginPage key={authKey} />
   }
 
   // 根据角色显示对应页面
   if (userRole === 'teacher') {
-    return <TeacherDashboard />
+    console.log('Showing teacher dashboard')
+    return <TeacherDashboard key={authKey} />
   } else if (userRole === 'student') {
-    return <StudentDashboard />
+    console.log('Showing student dashboard')
+    return <StudentDashboard key={authKey} />
   } else {
+    console.log('Unknown role, showing login page')
     // 如果角色未知，显示登录页面重新验证
-    return <LoginPage />
+    return <LoginPage key={authKey} />
   }
 }
 

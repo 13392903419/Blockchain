@@ -40,13 +40,23 @@ export function generateToken(user: AuthUser): string {
 // 验证JWT token
 export function verifyToken(token: string): AuthUser | null {
   try {
+    console.log('开始验证token...');
     const decoded = jwt.verify(token, JWT_SECRET) as any;
+    console.log('token解码成功:', { address: decoded.address, role: decoded.role, exp: decoded.exp });
+
+    // 检查是否过期
+    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+      console.log('token已过期');
+      return null;
+    }
+
     return {
       address: decoded.address,
       role: decoded.role,
       nonce: ''
     };
-  } catch {
+  } catch (error) {
+    console.log('token验证失败:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }

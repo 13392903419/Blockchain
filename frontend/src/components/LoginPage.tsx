@@ -13,18 +13,17 @@ export function LoginPage() {
   const handleLogin = async () => {
     try {
       setLoginError('')
-      await login()
+      console.log('开始登录...')
+      const result = await login()
+      console.log('登录结果:', result)
+      console.log('当前认证状态 - isAuthenticated:', isAuthenticated, 'userRole:', userRole)
     } catch (error: any) {
+      console.error('登录失败:', error)
       setLoginError(error.message)
     }
   }
 
   const injectedConnector = connectors.find(c => c.id === 'injected') || connectors[0]
-
-  // 如果已经认证且有角色，直接跳转（不显示等待界面）
-  if (isAuthenticated && userRole) {
-    return null // App.tsx 会处理页面跳转
-  }
 
   return (
     <div className="login-container">

@@ -10,6 +10,7 @@ export interface Course {
 export interface Session {
   id: string;
   courseId: string;
+  sessionNumber: number; // 课程内的课次序号，用于显示
   name: string;
   description?: string;
   startTime: number;

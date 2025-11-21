@@ -55,21 +55,26 @@ app.post("/auth/login", async (req: any, res: any) => {
       return res.status(401).json({ error: "Invalid signature" });
     }
 
-    // 确定用户角色（若未配置 OWNER_PRIVATE_KEY，默认使用 Hardhat 本地链的 Account #0 私钥）
-    const DEFAULT_HARDHAT_OWNER_PK = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-    const ownerPkForRole = process.env.OWNER_PRIVATE_KEY && process.env.OWNER_PRIVATE_KEY.trim() !== ''
-      ? process.env.OWNER_PRIVATE_KEY
-      : DEFAULT_HARDHAT_OWNER_PK;
-    const ownerAddress = new ethers.Wallet(ownerPkForRole).address;
-    const role = isTeacher(address, ownerAddress) ? 'teacher' : 'student';
+    // 从数据库查询用户角色
+    let user_db = await db.getUser(address);
+    let role: 'teacher' | 'student';
 
-    // 创建或更新用户
-    let user = await db.getUser(address);
-    if (!user) {
-      user = await db.createUser({ address, role });
+    if (user_db) {
+      // 用户已存在，使用数据库中已保存的角色
+      role = user_db.role;
+      console.log(`用户 ${address} 已存在，使用数据库角色: ${role}`);
     } else {
-      user = await db.updateUser(address, { role });
+      // 新用户，根据OWNER地址确定初始角色
+      const ownerAddress = process.env.OWNER_PRIVATE_KEY
+        ? new ethers.Wallet(process.env.OWNER_PRIVATE_KEY).address
+        : '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'; // 默认Hardhat账户0
+
+      role = address.toLowerCase() === ownerAddress.toLowerCase() ? 'teacher' : 'student';
+      user_db = await db.createUser({ address, role });
+      console.log(`新用户 ${address} 创建，分配角色: ${role}`);
     }
+
+    // 用户记录已在上面处理，这里不需要额外操作
 
     // 生成JWT token
     const token = generateToken({ address, role, nonce: message });

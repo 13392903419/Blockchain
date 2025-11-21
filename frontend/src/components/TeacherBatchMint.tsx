@@ -107,14 +107,17 @@ export function TeacherBatchMint() {
       return
     }
 
-    console.log('开始批量铸造:', { contractAddress, sessionId, addresses, tokenUri })
+    // 从复合sessionId中提取数字部分，如"CS-1" -> "1"
+    const numericSessionId = sessionId.includes('-') ? sessionId.split('-')[1] : sessionId;
+
+    console.log('开始批量铸造:', { contractAddress, sessionId, numericSessionId, addresses, tokenUri })
     setIsMinting(true)
 
     writeContract({
       address: contractAddress,
       abi: contractABI,
       functionName: 'batchMintAttendance',
-      args: [BigInt(sessionId), addresses as `0x${string}`[], tokenUri],
+      args: [BigInt(numericSessionId), addresses as `0x${string}`[], tokenUri],
     })
   }
 
@@ -130,7 +133,10 @@ export function TeacherBatchMint() {
       return
     }
 
-    console.log('开始单个铸造:', { contractAddress, sessionId, address, tokenUri })
+    // 从复合sessionId中提取数字部分，如"CS-1" -> "1"
+    const numericSessionId = sessionId.includes('-') ? sessionId.split('-')[1] : sessionId;
+
+    console.log('开始单个铸造:', { contractAddress, sessionId, numericSessionId, address, tokenUri })
     setIsMinting(true)
 
     try {
@@ -139,7 +145,7 @@ export function TeacherBatchMint() {
         address: contractAddress,
         abi: contractABI,
         functionName: 'mintAttendance',
-        args: [BigInt(sessionId), address as `0x${string}`, tokenUri],
+        args: [BigInt(numericSessionId), address as `0x${string}`, tokenUri],
       })
       console.log('交易已发送:', hash)
       alert(`交易已发送: ${hash}`)

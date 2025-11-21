@@ -53,7 +53,9 @@ export function AttendanceStatus() {
         }
 
         const contract = getContract({ address: contractAddress as `0x${string}`, abi, client })
-        const ok = (await contract.read.hasAttended([BigInt(sessionId), address])) as boolean
+        // 从复合sessionId中提取数字部分，如"CS-1" -> "1"
+        const numericSessionId = sessionId.includes('-') ? sessionId.split('-')[1] : sessionId;
+        const ok = (await contract.read.hasAttended([BigInt(numericSessionId), address])) as boolean
         console.log('Contract result:', ok)
         setAttended(ok)
       } catch (error: any) {
