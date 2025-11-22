@@ -251,23 +251,6 @@ class Database {
     }));
   }
 
-  async getAllSessions(): Promise<Session[]> {
-    await this.connect();
-    const sessions = await SessionModel.find({});
-
-    return sessions.map(session => ({
-      id: session.id,
-      courseId: session.courseId,
-      sessionNumber: session.sessionNumber,
-      globalSessionId: session.globalSessionId,
-      name: session.name,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      createdAt: session.createdAt.getTime(),
-      updatedAt: session.updatedAt.getTime()
-    }));
-  }
-
   async updateSession(id: string, updates: Partial<Omit<Session, 'id' | 'createdAt' | 'courseId'>>): Promise<Session | undefined> {
     await this.connect();
     const session = await SessionModel.findOneAndUpdate(
@@ -524,12 +507,40 @@ class Database {
       id: session.id,
       courseId: session.courseId,
       sessionNumber: session.sessionNumber,
+      globalSessionId: session.globalSessionId,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
       createdAt: session.createdAt.getTime(),
       updatedAt: session.updatedAt.getTime()
     }));
+  }
+
+  // 数据完整性检查 - 确保所有session都有globalSessionId
+  async validateSessionIntegrity(): Promise<{ isValid: boolean; issues: string[] }> {
+    await this.connect();
+    const sessions = await SessionModel.find();
+    const issues: string[] = [];
+
+    let sessionsWithoutGlobalId = 0;
+    const globalIdSet = new Set<number>();
+
+    for (const session of sessions) {
+      if (!session.globalSessionId) {
+        sessionsWithoutGlobalId++;
+        issues.push(`Session ${session._id} 缺少globalSessionId`);
+      } else {
+        if (globalIdSet.has(session.globalSessionId)) {
+          issues.push(`globalSessionId ${session.globalSessionId} 重复使用`);
+        } else {
+          globalIdSet.add(session.globalSessionId);
+        }
+      }
+    }
+
+    const isValid = issues.length === 0;
+
+    return { isValid, issues };
   }
 }
 

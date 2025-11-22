@@ -139,11 +139,9 @@ export function TeacherBatchMint() {
     setMintResult('正在铸造NFT...')
 
     try {
-      // 从sessionId中提取数字部分作为合约的sessionId
-      // 例如: "course_1763722821785_k1qj82-1" -> "1"
-      const contractSessionId = selectedSessionId.includes('-')
-        ? selectedSessionId.split('-')[1]
-        : selectedSessionId
+      // 查找选中session的globalSessionId作为合约的sessionId
+      const selectedSession = sessions.find(s => s.id === selectedSessionId)
+      const contractSessionId = selectedSession?.globalSessionId || selectedSessionId
 
       console.log('合约调用参数:', {
         sessionId: contractSessionId,

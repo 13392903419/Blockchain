@@ -41,6 +41,10 @@ export function StudentAttendanceRecords() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('')
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
 
+  // 用于显示的课程和课次映射
+  const [allCourses, setAllCourses] = useState<Course[]>([])
+  const [allSessions, setAllSessions] = useState<Session[]>([])
+
   // 获取所有课程
   const loadCourses = async () => {
     if (!isAuthenticated) return
@@ -70,6 +74,52 @@ export function StudentAttendanceRecords() {
       }
     } catch (error) {
       console.error('获取课次列表失败:', error)
+    }
+  }
+
+  // 加载所有课程和课次信息（用于显示课程名）
+  const loadAllCoursesAndSessions = async () => {
+    if (!isAuthenticated) return
+    try {
+      console.log('🔍 开始加载所有课程和课次信息...')
+      // 获取所有课程
+      const coursesResponse = await fetch(`${API}/api/courses`, {
+        headers: getAuthHeaders()
+      })
+      if (coursesResponse.ok) {
+        const coursesData = await coursesResponse.json()
+        console.log('✅ 获取到课程数据:', coursesData.length, '个课程')
+        setAllCourses(coursesData)
+
+        // 为每个课程获取课次信息
+        const allSessionsData: Session[] = []
+        for (const course of coursesData) {
+          try {
+            const sessionsResponse = await fetch(`${API}/api/courses/${course.id}/sessions`, {
+              headers: getAuthHeaders()
+            })
+            if (sessionsResponse.ok) {
+              const sessionsData = await sessionsResponse.json()
+              console.log(`✅ 课程 "${course.name}" 有 ${sessionsData.length} 个课次`)
+              allSessionsData.push(...sessionsData)
+            }
+          } catch (error) {
+            console.error(`❌ 获取课程 ${course.name} 的课次失败:`, error)
+          }
+        }
+        console.log('✅ 总共加载了', allSessionsData.length, '个课次')
+        console.log('📋 加载的课程列表:', coursesData.map((c:any) => ({ id: c.id, name: c.name })))
+        console.log('📋 加载的课次列表:', allSessionsData.map(s => ({
+          id: s.id,
+          courseId: s.courseId,
+          name: s.name
+        })))
+        setAllSessions(allSessionsData)
+      } else {
+        console.error('❌ 获取课程列表失败:', coursesResponse.status)
+      }
+    } catch (error) {
+      console.error('❌ 加载所有课程和课次信息失败:', error)
     }
   }
 
@@ -135,9 +185,10 @@ export function StudentAttendanceRecords() {
     }
   }
 
-  // 组件加载时获取课程列表
+  // 组件加载时获取课程列表和所有课程课次信息
   useEffect(() => {
     loadCourses()
+    loadAllCoursesAndSessions()
   }, [isAuthenticated])
 
   // 当选择的课程改变时，获取对应的课次列表
@@ -233,6 +284,7 @@ export function StudentAttendanceRecords() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f5f5f5' }}>
+                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>课程名</th>
                   <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>课次</th>
                   <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>Token ID</th>
                   <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>状态</th>
@@ -242,13 +294,54 @@ export function StudentAttendanceRecords() {
               </thead>
               <tbody>
                 {records.map((record) => {
+                  // 找到对应的session信息 - 尝试多种匹配方式
+                  const session = allSessions.find(s => {
+                    // 尝试精确匹配
+                    if (s.id === record.sessionId) return true
+                    // 尝试字符串转换匹配
+                    if (String(s.id) === String(record.sessionId)) return true
+                    return false
+                  })
+
+                  // 找到对应的课程信息
+                  const course = session ? allCourses.find(c => {
+                    // 尝试精确匹配
+                    if (c.id === session.courseId) return true
+                    // 尝试字符串转换匹配
+                    if (String(c.id) === String(session.courseId)) return true
+                    return false
+                  }) : null
+
                   // 显示友好的课次信息：从sessionId中提取序号
-                  const sessionNumber = record.sessionId.includes('-') ? record.sessionId.split('-')[1] : record.sessionId
-                  const displayText = `第${sessionNumber}次课`
+                  const sessionNumber = String(record.sessionId).includes('-') ? String(record.sessionId).split('-')[1] : String(record.sessionId)
+                  const sessionDisplayText = session ? session.name : `第${sessionNumber}次课`
+                  const courseDisplayText = course ? course.name : `课程ID:${session?.courseId || '未知'}`
+
+                  // 调试信息 - 为每个记录都显示，方便调试
+                  console.log(`🔍 记录 ${record.id}:`, {
+                    recordSessionId: record.sessionId,
+                    recordSessionIdType: typeof record.sessionId,
+                    foundSession: session ? {
+                      id: session.id,
+                      idType: typeof session.id,
+                      name: session.name,
+                      courseId: session.courseId,
+                      courseIdType: typeof session.courseId
+                    } : null,
+                    foundCourse: course ? {
+                      id: course.id,
+                      idType: typeof course.id,
+                      name: course.name
+                    } : null,
+                    courseDisplayText,
+                    allSessionsCount: allSessions.length,
+                    allCoursesCount: allCourses.length
+                  })
 
                   return (
                     <tr key={record.id}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{displayText}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{courseDisplayText}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{sessionDisplayText}</td>
                       <td style={{ padding: '8px', border: '1px solid #ddd' }}>
                         {record.tokenId ? `#${record.tokenId}` : '-'}
                       </td>

@@ -56,20 +56,19 @@ async function startBlockchainListener() {
 
         const numericSessionId = contractSessionId.toString();
 
-        // 需要找到对应的数据库sessionId
-        // 由于前端传递的是sessionNumber，我们需要找到对应的数据库session记录
-        // 这里我们通过遍历所有session来找到匹配的sessionNumber
+        // 直接使用globalSessionId匹配数据库session记录
+        // 区块链上的sessionId就是数据库的globalSessionId
         const allSessions = await db.getAllSessions();
-        const matchingSession = allSessions.find((session: any) => session.sessionNumber.toString() === numericSessionId);
+        const matchingSession = allSessions.find((session: any) => session.globalSessionId === Number(numericSessionId));
 
         if (!matchingSession) {
-          console.error('❌ 未找到匹配的数据库session记录，Session Number:', numericSessionId);
-          console.error('   所有可用session:', allSessions.map((s: any) => ({ id: s.id, sessionNumber: s.sessionNumber })));
+          console.error('❌ 未找到匹配的数据库session记录，Global Session ID:', numericSessionId);
+          console.error('   所有可用session:', allSessions.map((s: any) => ({ id: s.id, globalSessionId: s.globalSessionId, sessionNumber: s.sessionNumber })));
           return;
         }
 
         const dbSessionId = matchingSession.id;
-        console.log('✅ 找到匹配的数据库Session:', dbSessionId);
+        console.log('✅ 找到匹配的数据库Session:', dbSessionId, '(Global Session ID:', matchingSession.globalSessionId, ')');
 
         // 检查数据库中是否已有记录
         const existingRecord = await db.getAttendanceRecordByStudentAndSession(student, dbSessionId);
@@ -424,8 +423,8 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
       return res.status(400).json({ error: "Already checked in for this session" });
     }
 
-    // 使用sessionNumber作为合约的sessionId
-    const contractSessionId = session.sessionNumber;
+    // 使用globalSessionId作为合约的sessionId，确保唯一性
+    const contractSessionId = session.globalSessionId || session.sessionNumber;
 
     // 调用合约铸造NFT
     const provider = new ethers.JsonRpcProvider(rpcUrl);
