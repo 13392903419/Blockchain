@@ -385,12 +385,8 @@ const attendanceAbi = [
 
 app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (req: any, res: any) => {
   try {
-    const { sessionId, tokenUri } = req.body;
+    const { sessionId } = req.body;
     const studentAddress = req.user!.address;
-
-    if (!ownerPk || !contractAddress) {
-      return res.status(500).json({ error: "Server not configured" });
-    }
 
     if (typeof sessionId !== "number" && typeof sessionId !== "string") {
       return res.status(400).json({ error: "Invalid sessionId" });
@@ -402,8 +398,9 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
       return res.status(404).json({ error: "Session not found" });
     }
 
-    console.log('🔍 学生签到调试:', {
+    console.log('🔍 学生签到查询:', {
       requestedSessionId: sessionId,
+      studentAddress: studentAddress,
       foundSession: {
         id: session.id,
         sessionNumber: session.sessionNumber,
@@ -413,46 +410,35 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
       }
     });
 
-    // 检查是否已经签到
-    const existingRecords = await db.getAttendanceBySession(sessionId.toString());
-    const alreadyCheckedIn = existingRecords.some((record: any) =>
-      record.studentAddress.toLowerCase() === studentAddress.toLowerCase()
+    // 查询该学生的出勤记录（由教师铸造产生）
+    const attendanceRecord = await db.getAttendanceRecordByStudentAndSession(
+      studentAddress,
+      sessionId.toString()
     );
 
-    if (alreadyCheckedIn) {
-      return res.status(400).json({ error: "Already checked in for this session" });
+    if (!attendanceRecord) {
+      return res.status(404).json({
+        error: "No attendance record found. Please contact your teacher if you believe this is an error.",
+        checkedIn: false
+      });
     }
 
-    // 使用globalSessionId作为合约的sessionId，确保唯一性
-    const contractSessionId = session.globalSessionId || session.sessionNumber;
-
-    // 调用合约铸造NFT
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const wallet = new ethers.Wallet(ownerPk, provider);
-    const contract = new ethers.Contract(contractAddress, attendanceAbi, wallet);
-
-    const tx = await contract.mintAttendance!(
-      BigInt(contractSessionId),
-      studentAddress,
-      tokenUri || "ipfs://metadata"
-    );
-    const receipt = await tx.wait();
-
-    // 记录出勤
-    const attendanceRecord = await db.createAttendanceRecord({
-      sessionId: sessionId.toString(),
-      studentAddress,
-      tokenId: receipt.logs?.[0]?.topics?.[3] || undefined,
-      txHash: tx.hash,
-      status: 'present'
+    console.log('✅ 找到出勤记录:', {
+      sessionId: attendanceRecord.sessionId,
+      studentAddress: attendanceRecord.studentAddress,
+      tokenId: attendanceRecord.tokenId,
+      txHash: attendanceRecord.txHash,
+      status: attendanceRecord.status,
+      timestamp: attendanceRecord.timestamp
     });
 
-    res.json({ 
-      hash: tx.hash, 
-      status: receipt?.status,
-      record: attendanceRecord
+    res.json({
+      checkedIn: true,
+      record: attendanceRecord,
+      message: "Attendance record found successfully"
     });
   } catch (error: any) {
+    console.error('❌ 学生签到查询失败:', error);
     res.status(500).json({ error: error.message });
   }
 });

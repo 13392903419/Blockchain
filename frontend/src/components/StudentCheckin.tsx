@@ -94,8 +94,7 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          sessionId: selectedSessionId,
-          tokenUri
+          sessionId: selectedSessionId
         })
       })
 
@@ -105,8 +104,14 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
       }
 
       const data = await response.json()
-      setResult(`✅ 签到成功！交易哈希: ${data.hash}`)
-      console.log('签到成功:', data)
+
+      if (data.checkedIn) {
+        setResult(`✅ 出勤记录确认成功！${data.message}`)
+        console.log('出勤记录查询成功:', data)
+      } else {
+        setResult(`❌ 未找到出勤记录: ${data.error}`)
+        console.log('未找到出勤记录:', data)
+      }
 
       // 调用成功回调，刷新统计数据
       if (onCheckinSuccess) {
@@ -114,7 +119,7 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
       }
     } catch (e: any) {
       console.error('签到失败:', e)
-      setResult(`❌ 签到失败: ${e.message}`)
+      setResult(`❌ 查询失败: ${e.message}`)
     } finally {
       setLoading(false)
     }
@@ -123,7 +128,7 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
   if (!isAuthenticated) {
     return (
       <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-        <h3>学生签到（基础版）</h3>
+        <h3>学生出勤查询（教师记录模式）</h3>
         <p>请先连接钱包并登录</p>
         <button onClick={login}>登录</button>
       </div>
@@ -132,7 +137,7 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
 
   return (
     <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-      <h3>学生签到（基础版）</h3>
+      <h3>学生出勤查询（教师记录模式）</h3>
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <label>课次ID:</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '200px' }}>
@@ -163,9 +168,8 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
             ))}
           </select>
         </div>
-        <label>元数据URI:</label>
-        <input value={tokenUri} onChange={e=>setTokenUri(e.target.value)} style={{ width:280 }} />
-        <button onClick={submit} disabled={loading}>{loading ? '提交中...' : '提交签到'}</button>
+        {/* 在教师记录模式下，不需要元数据URI输入 */}
+        <button onClick={submit} disabled={loading}>{loading ? '查询中...' : '查询出勤记录'}</button>
       </div>
       {result && <div style={{ marginTop:12 }}>{result}</div>}
     </div>
