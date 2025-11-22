@@ -203,17 +203,21 @@ class Database {
       endTime: session.endTime,
     });
 
-    return {
+    const result: Session = {
       id: newSession.id,
       courseId: newSession.courseId,
       sessionNumber: newSession.sessionNumber,
-      globalSessionId: globalSessionId,
       name: newSession.name,
       startTime: newSession.startTime,
       endTime: newSession.endTime,
       createdAt: newSession.createdAt.getTime(),
       updatedAt: newSession.updatedAt.getTime()
     };
+
+    // globalSessionId is guaranteed to exist since we just created it
+    (result as any).globalSessionId = globalSessionId;
+
+    return result;
   }
 
   async getSession(id: string): Promise<Session | undefined> {
@@ -221,34 +225,48 @@ class Database {
     const session = await SessionModel.findOne({ _id: id });
     if (!session) return undefined;
 
-    return {
+    const result: Session = {
       id: session.id,
       courseId: session.courseId,
       sessionNumber: session.sessionNumber,
-      globalSessionId: session.globalSessionId,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
       createdAt: session.createdAt.getTime(),
       updatedAt: session.updatedAt.getTime()
     };
+
+    // Conditionally include globalSessionId only when it exists
+    if (session.globalSessionId !== undefined) {
+      (result as any).globalSessionId = session.globalSessionId;
+    }
+
+    return result;
   }
 
   async getSessionsByCourse(courseId: string): Promise<Session[]> {
     await this.connect();
     const sessions = await SessionModel.find({ courseId });
 
-    return sessions.map(session => ({
-      id: session.id,
-      courseId: session.courseId,
-      sessionNumber: session.sessionNumber,
-      globalSessionId: session.globalSessionId,
-      name: session.name,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      createdAt: session.createdAt.getTime(),
-      updatedAt: session.updatedAt.getTime()
-    }));
+    return sessions.map(session => {
+      const result: Session = {
+        id: session.id,
+        courseId: session.courseId,
+        sessionNumber: session.sessionNumber,
+        name: session.name,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        createdAt: session.createdAt.getTime(),
+        updatedAt: session.updatedAt.getTime()
+      };
+
+      // Conditionally include globalSessionId only when it exists
+      if (session.globalSessionId !== undefined) {
+        (result as any).globalSessionId = session.globalSessionId;
+      }
+
+      return result;
+    });
   }
 
   async updateSession(id: string, updates: Partial<Omit<Session, 'id' | 'createdAt' | 'courseId'>>): Promise<Session | undefined> {
@@ -503,17 +521,25 @@ class Database {
     await this.connect();
     const sessions = await SessionModel.find();
 
-    return sessions.map(session => ({
-      id: session.id,
-      courseId: session.courseId,
-      sessionNumber: session.sessionNumber,
-      globalSessionId: session.globalSessionId,
-      name: session.name,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      createdAt: session.createdAt.getTime(),
-      updatedAt: session.updatedAt.getTime()
-    }));
+    return sessions.map(session => {
+      const result: Session = {
+        id: session.id,
+        courseId: session.courseId,
+        sessionNumber: session.sessionNumber,
+        name: session.name,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        createdAt: session.createdAt.getTime(),
+        updatedAt: session.updatedAt.getTime()
+      };
+
+      // Conditionally include globalSessionId only when it exists
+      if (session.globalSessionId !== undefined) {
+        (result as any).globalSessionId = session.globalSessionId;
+      }
+
+      return result;
+    });
   }
 
   // 数据完整性检查 - 确保所有session都有globalSessionId
