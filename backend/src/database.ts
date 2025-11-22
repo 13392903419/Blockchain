@@ -30,6 +30,7 @@ const sessionSchema = new mongoose.Schema({
   _id: { type: String },
   courseId: { type: String, required: true },
   sessionNumber: { type: Number, required: true }, // 课程内的课次序号，用于显示
+  globalSessionId: { type: Number }, // 全局唯一的数字ID，用于区块链
   name: { type: String, required: true },
   description: { type: String, default: '' },
   startTime: { type: Number, required: true },
@@ -182,8 +183,11 @@ class Database {
     // 为每个课程生成独立的递增sessionNumber（从1开始）
     // 查询该课程现有的最大sessionNumber，然后加1
     const existingSessions = await SessionModel.find({ courseId: session.courseId }).sort({ sessionNumber: -1 }).limit(1);
-    const maxSessionNum = existingSessions.length > 0 ? Number(existingSessions[0].sessionNumber) || 0 : 0;
+    const maxSessionNum = existingSessions.length > 0 ? Number(existingSessions[0]?.sessionNumber) || 0 : 0;
     const sessionNum = maxSessionNum + 1;
+
+    // 生成全局唯一的数字ID用于区块链
+    const globalSessionId = await getNextSequence('global_session');
 
     // 使用复合ID格式：courseId-sessionNum，保证全局唯一性
     const id = `${session.courseId}-${sessionNum}`;
@@ -192,6 +196,7 @@ class Database {
       _id: id,
       courseId: session.courseId,
       sessionNumber: sessionNum,
+      globalSessionId: globalSessionId, // 添加全局唯一ID
       name: session.name ?? `第${sessionNum}次课`,
       description: session.description ?? '',
       startTime: session.startTime,
@@ -202,6 +207,7 @@ class Database {
       id: newSession.id,
       courseId: newSession.courseId,
       sessionNumber: newSession.sessionNumber,
+      globalSessionId: globalSessionId,
       name: newSession.name,
       startTime: newSession.startTime,
       endTime: newSession.endTime,
@@ -219,6 +225,7 @@ class Database {
       id: session.id,
       courseId: session.courseId,
       sessionNumber: session.sessionNumber,
+      globalSessionId: session.globalSessionId,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
@@ -235,6 +242,24 @@ class Database {
       id: session.id,
       courseId: session.courseId,
       sessionNumber: session.sessionNumber,
+      globalSessionId: session.globalSessionId,
+      name: session.name,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      createdAt: session.createdAt.getTime(),
+      updatedAt: session.updatedAt.getTime()
+    }));
+  }
+
+  async getAllSessions(): Promise<Session[]> {
+    await this.connect();
+    const sessions = await SessionModel.find({});
+
+    return sessions.map(session => ({
+      id: session.id,
+      courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
+      globalSessionId: session.globalSessionId,
       name: session.name,
       startTime: session.startTime,
       endTime: session.endTime,
@@ -292,6 +317,28 @@ class Database {
 
     if (newRecord.tokenId) result.tokenId = newRecord.tokenId;
     if (newRecord.txHash) result.txHash = newRecord.txHash;
+
+    return result;
+  }
+
+  async getAttendanceRecordByStudentAndSession(studentAddress: string, sessionId: string): Promise<AttendanceRecord | undefined> {
+    await this.connect();
+    const record = await AttendanceRecordModel.findOne({
+      studentAddress: studentAddress.toLowerCase(),
+      sessionId: sessionId
+    });
+    if (!record) return undefined;
+
+    const result: AttendanceRecord = {
+      id: record.id,
+      sessionId: record.sessionId,
+      studentAddress: record.studentAddress,
+      status: record.status,
+      timestamp: record.timestamp.getTime()
+    };
+
+    if (record.tokenId) result.tokenId = record.tokenId;
+    if (record.txHash) result.txHash = record.txHash;
 
     return result;
   }

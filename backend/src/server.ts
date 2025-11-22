@@ -13,10 +13,111 @@ dotenv.config();
 // 数据库连接
 connectDB().then(() => {
   console.log('✅ Database connected successfully');
+
+  // 启动区块链事件监听
+  startBlockchainListener();
 }).catch((error: any) => {
   console.error('❌ Database connection failed:', error);
   process.exit(1);
 });
+
+// 区块链事件监听函数
+async function startBlockchainListener() {
+  try {
+    console.log('🔍 启动区块链事件监听...');
+
+    const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+    console.log('✅ 连接到区块链提供者');
+
+    // 获取合约地址 (AttendanceNFT合约地址)
+    const contractAddress = process.env.VITE_CONTRACT_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+    console.log('📋 监听合约地址:', contractAddress);
+
+    // 创建合约实例
+    const contract = new ethers.Contract(
+      contractAddress,
+      [
+        "event AttendanceRecorded(uint256 indexed sessionId, address indexed student, uint256 tokenId)",
+        "function hasAttended(uint256 sessionId, address student) view returns (bool)"
+      ],
+      provider
+    );
+
+    console.log('🎧 开始监听 AttendanceRecorded 事件...');
+
+    // 监听出勤记录事件
+    contract.on("AttendanceRecorded", async (contractSessionId: any, student: any, tokenId: any, event: any) => {
+      try {
+        console.log('📢 监听到出勤记录事件:');
+        console.log('   合约Session ID:', contractSessionId.toString());
+        console.log('   Student:', student);
+        console.log('   Token ID:', tokenId.toString());
+        console.log('   Transaction Hash:', event.log.transactionHash);
+
+        const numericSessionId = contractSessionId.toString();
+
+        // 需要找到对应的数据库sessionId
+        // 由于前端传递的是sessionNumber，我们需要找到对应的数据库session记录
+        // 这里我们通过遍历所有session来找到匹配的sessionNumber
+        const allSessions = await db.getAllSessions();
+        const matchingSession = allSessions.find((session: any) => session.sessionNumber.toString() === numericSessionId);
+
+        if (!matchingSession) {
+          console.error('❌ 未找到匹配的数据库session记录，Session Number:', numericSessionId);
+          console.error('   所有可用session:', allSessions.map((s: any) => ({ id: s.id, sessionNumber: s.sessionNumber })));
+          return;
+        }
+
+        const dbSessionId = matchingSession.id;
+        console.log('✅ 找到匹配的数据库Session:', dbSessionId);
+
+        // 检查数据库中是否已有记录
+        const existingRecord = await db.getAttendanceRecordByStudentAndSession(student, dbSessionId);
+        if (existingRecord) {
+          console.log('⚠️  记录已存在，跳过保存');
+          return;
+        }
+
+        // 保存到数据库
+        const attendanceRecord = await db.createAttendanceRecord({
+          sessionId: dbSessionId,
+          studentAddress: student,
+          tokenId: tokenId.toString(),
+          txHash: event.log.transactionHash,
+          status: 'present'
+        });
+
+        console.log('✅ 出勤记录已保存到数据库:', attendanceRecord.id);
+        console.log('   记录详情:', {
+          sessionId: attendanceRecord.sessionId,
+          studentAddress: attendanceRecord.studentAddress,
+          tokenId: attendanceRecord.tokenId,
+          txHash: attendanceRecord.txHash,
+          status: attendanceRecord.status
+        });
+
+      } catch (error: any) {
+        console.error('❌ 处理出勤记录事件失败:', error.message);
+        console.error('   错误详情:', error);
+        console.error('   事件数据:', {
+          contractSessionId: contractSessionId?.toString(),
+          student,
+          tokenId: tokenId?.toString(),
+          txHash: event?.log?.transactionHash
+        });
+      }
+    });
+
+    console.log('✅ 区块链事件监听器已启动');
+
+  } catch (error: any) {
+    console.error('❌ 启动区块链事件监听失败:', error.message);
+    console.error('请确保:');
+    console.error('1. Hardhat本地网络正在运行 (npx hardhat node)');
+    console.error('2. 合约已正确部署');
+    console.error('3. 合约地址配置正确');
+  }
+}
 
 const app = express();
 
@@ -55,26 +156,58 @@ app.post("/auth/login", async (req: any, res: any) => {
       return res.status(401).json({ error: "Invalid signature" });
     }
 
-    // 从数据库查询用户角色
-    let user_db = await db.getUser(address);
-    let role: 'teacher' | 'student';
+    // 从区块链查询用户角色
+    const roleManagerAddress = process.env.CONTRACT_ADDRESS;
+    console.log(`🔍 登录调试 - 合约地址: ${roleManagerAddress}`);
+    console.log(`🔍 登录调试 - 用户地址: ${address}`);
 
-    if (user_db) {
-      // 用户已存在，使用数据库中已保存的角色
-      role = user_db.role;
-      console.log(`用户 ${address} 已存在，使用数据库角色: ${role}`);
-    } else {
-      // 新用户，根据OWNER地址确定初始角色
-      const ownerAddress = process.env.OWNER_PRIVATE_KEY
-        ? new ethers.Wallet(process.env.OWNER_PRIVATE_KEY).address
-        : '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'; // 默认Hardhat账户0
-
-      role = address.toLowerCase() === ownerAddress.toLowerCase() ? 'teacher' : 'student';
-      user_db = await db.createUser({ address, role });
-      console.log(`新用户 ${address} 创建，分配角色: ${role}`);
+    if (!roleManagerAddress) {
+      console.error('❌ RoleManager contract not configured - CONTRACT_ADDRESS环境变量未设置');
+      return res.status(500).json({ error: "RoleManager contract not configured" });
     }
 
-    // 用户记录已在上面处理，这里不需要额外操作
+    // 连接到RoleManager合约
+    const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+    console.log('🔍 连接到区块链提供者');
+
+    const roleManagerContract = new ethers.Contract(
+      roleManagerAddress,
+      [
+        "function isTeacher(address) view returns (bool)",
+        "function isStudent(address) view returns (bool)"
+      ],
+      provider
+    );
+    console.log('🔍 RoleManager合约实例创建成功');
+
+    // 查询区块链上的角色
+    let role = 'student'; // 默认角色
+
+    try {
+      const isTeacherRole = await roleManagerContract.isTeacher(address);
+      const isStudentRole = await roleManagerContract.isStudent(address);
+      role = isTeacherRole ? 'teacher' : 'student';
+
+      console.log(`✅ 区块链查询结果:`);
+      console.log(`   用户地址: ${address}`);
+      console.log(`   isTeacher: ${isTeacherRole}`);
+      console.log(`   isStudent: ${isStudentRole}`);
+      console.log(`   最终角色: ${role}`);
+    } catch (contractError: any) {
+      console.error(`❌ 合约查询失败:`, contractError.message);
+      console.log(`使用默认角色: student`);
+      role = 'student';
+    }
+
+    // 创建或更新用户记录（仅用于统计，不影响角色判断）
+    let user = await db.getUser(address);
+    if (!user) {
+      user = await db.createUser({ address, role });
+      console.log(`新用户 ${address} 创建，区块链角色: ${role}`);
+    } else {
+      // 更新角色（以防区块链上角色有变更）
+      user = await db.updateUser(address, { role });
+    }
 
     // 生成JWT token
     const token = generateToken({ address, role, nonce: message });
@@ -270,9 +403,20 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
       return res.status(404).json({ error: "Session not found" });
     }
 
+    console.log('🔍 学生签到调试:', {
+      requestedSessionId: sessionId,
+      foundSession: {
+        id: session.id,
+        sessionNumber: session.sessionNumber,
+        globalSessionId: session.globalSessionId,
+        name: session.name,
+        courseId: session.courseId
+      }
+    });
+
     // 检查是否已经签到
     const existingRecords = await db.getAttendanceBySession(sessionId.toString());
-    const alreadyCheckedIn = existingRecords.some((record: any) => 
+    const alreadyCheckedIn = existingRecords.some((record: any) =>
       record.studentAddress.toLowerCase() === studentAddress.toLowerCase()
     );
 
@@ -280,14 +424,17 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
       return res.status(400).json({ error: "Already checked in for this session" });
     }
 
+    // 使用sessionNumber作为合约的sessionId
+    const contractSessionId = session.sessionNumber;
+
     // 调用合约铸造NFT
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(ownerPk, provider);
     const contract = new ethers.Contract(contractAddress, attendanceAbi, wallet);
-    
+
     const tx = await contract.mintAttendance!(
-      BigInt(sessionId), 
-      studentAddress, 
+      BigInt(contractSessionId),
+      studentAddress,
       tokenUri || "ipfs://metadata"
     );
     const receipt = await tx.wait();

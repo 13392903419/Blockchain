@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseEther } from 'viem'
+import { useAccount, useWriteContract } from 'wagmi'
+import { useAuth } from '../hooks/useAuth'
 
-// 合约 ABI - 包含批量铸造函数
+// 合约ABI
 const contractABI = [
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "sessionId", "type": "uint256" },
-      { "internalType": "address[]", "name": "students", "type": "address[]" },
-      { "internalType": "string", "name": "baseTokenUri", "type": "string" }
-    ],
-    "name": "batchMintAttendance",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
   {
     "inputs": [
       { "internalType": "uint256", "name": "sessionId", "type": "uint256" },
@@ -28,216 +17,298 @@ const contractABI = [
   }
 ] as const
 
+const API = 'http://localhost:4000'
+
+interface Course {
+  id: string
+  name: string
+  description?: string
+}
+
+interface Session {
+  id: string
+  courseId: string
+  sessionNumber: number
+  globalSessionId?: number
+  name: string
+  startTime: number
+  endTime: number
+}
+
 export function TeacherBatchMint() {
   const { address } = useAccount()
-  const [sessionId, setSessionId] = useState<string>('1')
-  const [studentAddresses, setStudentAddresses] = useState<string>('')
+  const { isAuthenticated, getAuthHeaders } = useAuth()
+
+  // 状态管理
+  const [courses, setCourses] = useState<Course[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('')
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('')
+  const [studentAddress, setStudentAddress] = useState<string>('')
   const [tokenUri, setTokenUri] = useState<string>('ipfs://metadata')
   const [isMinting, setIsMinting] = useState(false)
+  const [mintResult, setMintResult] = useState<string>('')
 
-  // 强制使用正确的合约地址，忽略环境变量
-  const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3' as `0x${string}`
+  // 合约地址
+  const contractAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512' as `0x${string}`
 
-  const { writeContract, writeContractAsync, data: hash, error, isPending } = useWriteContract()
+  const { writeContractAsync } = useWriteContract()
 
-  // 添加超时机制，防止按钮一直卡在"铸造中"状态
-  useEffect(() => {
-    if (isMinting) {
-      const timeout = setTimeout(() => {
-        console.log('铸造超时，重置状态')
-        setIsMinting(false)
-        alert('交易超时，请检查 MetaMask 连接')
-      }, 10000) // 10秒超时
-
-      return () => clearTimeout(timeout)
+  // 加载课程列表
+  const loadCourses = async () => {
+    if (!isAuthenticated) return
+    try {
+      const response = await fetch(`${API}/api/courses`, {
+        headers: getAuthHeaders()
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCourses(data)
+      }
+    } catch (error) {
+      console.error('获取课程列表失败:', error)
     }
-  }, [isMinting])
-  
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash,
-  })
-
-  const isProcessing = isPending || isConfirming || isMinting
-
-  // 监听交易状态变化，当交易完成时重置 isMinting 状态
-  useEffect(() => {
-    if (isConfirmed || error) {
-      setIsMinting(false)
-    }
-  }, [isConfirmed, error])
-
-  // 监听 writeContract 的状态变化
-  useEffect(() => {
-    if (hash) {
-      console.log('交易哈希已生成:', hash)
-      alert(`交易已发送: ${hash}`)
-      setIsMinting(false)
-    }
-  }, [hash])
-
-  useEffect(() => {
-    if (error) {
-      console.error('writeContract 错误:', error)
-      alert(`交易失败: ${error.message}`)
-      setIsMinting(false)
-    }
-  }, [error])
-
-  const handleBatchMint = async () => {
-    if (!contractAddress || !studentAddresses.trim()) {
-      alert('请填写合约地址和学生地址')
-      return
-    }
-
-    // 解析学生地址列表
-    const addresses = studentAddresses
-      .split('\n')
-      .map(addr => addr.trim())
-      .filter(addr => addr.length > 0)
-
-    if (addresses.length === 0) {
-      alert('请输入至少一个学生地址')
-      return
-    }
-
-    // 验证地址格式
-    const invalidAddresses = addresses.filter(addr => !addr.match(/^0x[a-fA-F0-9]{40}$/))
-    if (invalidAddresses.length > 0) {
-      alert(`以下地址格式不正确: ${invalidAddresses.join(', ')}`)
-      return
-    }
-
-    // 从复合sessionId中提取数字部分，如"CS-1" -> "1"
-    const numericSessionId = sessionId.includes('-') ? sessionId.split('-')[1] : sessionId;
-
-    console.log('开始批量铸造:', { contractAddress, sessionId, numericSessionId, addresses, tokenUri })
-    setIsMinting(true)
-
-    writeContract({
-      address: contractAddress,
-      abi: contractABI,
-      functionName: 'batchMintAttendance',
-      args: [BigInt(numericSessionId), addresses as `0x${string}`[], tokenUri],
-    })
   }
 
-  const handleSingleMint = async () => {
-    if (!contractAddress || !studentAddresses.trim()) {
-      alert('请填写合约地址和学生地址')
+  // 加载指定课程的课次
+  const loadSessions = async (courseId: string) => {
+    if (!isAuthenticated || !courseId) return
+    try {
+      const response = await fetch(`${API}/api/courses/${courseId}/sessions`, {
+        headers: getAuthHeaders()
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setSessions(data)
+      }
+    } catch (error) {
+      console.error('获取课次列表失败:', error)
+    }
+  }
+
+  // 当选择课程时，加载对应的课次
+  useEffect(() => {
+    if (selectedCourseId) {
+      loadSessions(selectedCourseId)
+      setSelectedSessionId('') // 重置课次选择
+    } else {
+      setSessions([])
+    }
+  }, [selectedCourseId])
+
+  // 初始化加载课程
+  useEffect(() => {
+    loadCourses()
+  }, [isAuthenticated])
+
+  // 铸造NFT
+  const handleMint = async () => {
+    if (!selectedSessionId) {
+      alert('请选择课次')
       return
     }
 
-    const address = studentAddresses.trim()
-    if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
+    if (!studentAddress.trim()) {
+      alert('请输入学生地址')
+      return
+    }
+
+    const addr = studentAddress.trim()
+    if (!addr.match(/^0x[a-fA-F0-9]{40}$/)) {
       alert('学生地址格式不正确')
       return
     }
 
-    // 从复合sessionId中提取数字部分，如"CS-1" -> "1"
-    const numericSessionId = sessionId.includes('-') ? sessionId.split('-')[1] : sessionId;
+    // 获取session信息
+    const selectedSession = sessions.find(s => s.id === selectedSessionId)
+    if (!selectedSession) {
+      alert('选择的课次不存在')
+      return
+    }
 
-    console.log('开始单个铸造:', { contractAddress, sessionId, numericSessionId, address, tokenUri })
+    console.log('开始铸造NFT:', {
+      contractAddress,
+      sessionId: selectedSessionId,
+      sessionNumber: selectedSession.sessionNumber,
+      globalSessionId: selectedSession.globalSessionId,
+      studentAddress: addr,
+      tokenUri
+    })
+
     setIsMinting(true)
+    setMintResult('正在铸造NFT...')
 
     try {
-      // 使用 writeContractAsync 方法
+      // 从sessionId中提取数字部分作为合约的sessionId
+      // 例如: "course_1763722821785_k1qj82-1" -> "1"
+      const contractSessionId = selectedSessionId.includes('-')
+        ? selectedSessionId.split('-')[1]
+        : selectedSessionId
+
+      console.log('合约调用参数:', {
+        sessionId: contractSessionId,
+        student: addr,
+        tokenUri
+      })
+
       const hash = await writeContractAsync({
         address: contractAddress,
         abi: contractABI,
         functionName: 'mintAttendance',
-        args: [BigInt(numericSessionId), address as `0x${string}`, tokenUri],
+        args: [BigInt(contractSessionId), addr as `0x${string}`, tokenUri],
       })
-      console.log('交易已发送:', hash)
-      alert(`交易已发送: ${hash}`)
-      setIsMinting(false)
+
+      console.log('铸造成功:', hash)
+
+      // 铸造成功后，通过API记录出勤到数据库
+      try {
+        const attendanceResponse = await fetch(`${API}/api/attendance/record`, {
+          method: 'POST',
+          headers: {
+            ...getAuthHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionId: selectedSessionId, // 使用完整的sessionId
+            studentAddress: addr,
+            tokenId: undefined, // 暂时不知道tokenId，需要从交易回执中获取
+            txHash: hash,
+            tokenUri: tokenUri
+          })
+        })
+
+        if (attendanceResponse.ok) {
+          const attendanceData = await attendanceResponse.json()
+          console.log('出勤记录成功:', attendanceData)
+          setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n✅ 出勤记录已保存到数据库`)
+        } else {
+          const errorData = await attendanceResponse.json()
+          console.error('出勤记录失败:', errorData)
+          setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n⚠️ 出勤记录保存失败: ${errorData.error}`)
+        }
+      } catch (apiError: any) {
+        console.error('API调用失败:', apiError)
+        setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n⚠️ 出勤记录API调用失败: ${apiError.message}`)
+      }
     } catch (err: any) {
-      console.error('交易失败:', err)
-      alert(`交易失败: ${err.message || '请检查权限和参数'}`)
+      console.error('铸造失败:', err)
+
+      let errorMsg = '未知错误'
+      if (err?.message) {
+        if (err.message.includes('reverted')) {
+          errorMsg = '合约执行失败，可能是权限或参数问题'
+        } else if (err.message.includes('User rejected')) {
+          errorMsg = '用户取消了交易'
+        } else {
+          errorMsg = err.message
+        }
+      }
+
+      setMintResult(`❌ 铸造失败: ${errorMsg}`)
+    } finally {
       setIsMinting(false)
     }
   }
 
   return (
     <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 20 }}>
-      <h3>教师端 - 批量铸造出勤NFT</h3>
-      
+      <h3>教师端 - 铸造出勤NFT</h3>
+
+      {/* 课程选择 */}
       <div style={{ marginBottom: 16 }}>
-        <label>课次ID: </label>
-        <input 
-          value={sessionId} 
-          onChange={(e) => setSessionId(e.target.value)} 
-          style={{ width: 120, marginLeft: 8 }}
-          placeholder="1"
+        <label>选择课程: </label>
+        <select
+          value={selectedCourseId}
+          onChange={(e) => setSelectedCourseId(e.target.value)}
+          style={{ width: 200, marginLeft: 8, padding: '4px 8px' }}
+        >
+          <option value="">请选择课程</option>
+          {courses.map(course => (
+            <option key={course.id} value={course.id}>
+              {course.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 课次选择 */}
+      <div style={{ marginBottom: 16 }}>
+        <label>选择课次: </label>
+        <select
+          value={selectedSessionId}
+          onChange={(e) => setSelectedSessionId(e.target.value)}
+          style={{ width: 200, marginLeft: 8, padding: '4px 8px' }}
+          disabled={!selectedCourseId}
+        >
+          <option value="">请选择课次</option>
+          {sessions.map(session => (
+            <option key={session.id} value={session.id}>
+              {session.name} (#{session.sessionNumber})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 学生地址输入 */}
+      <div style={{ marginBottom: 16 }}>
+        <label>学生地址: </label>
+        <input
+          value={studentAddress}
+          onChange={(e) => setStudentAddress(e.target.value)}
+          style={{ width: 400, marginLeft: 8, padding: '4px 8px' }}
+          placeholder="0x..."
         />
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <label>学生地址 (每行一个): </label>
-        <textarea 
-          value={studentAddresses} 
-          onChange={(e) => setStudentAddresses(e.target.value)} 
-          style={{ width: '100%', height: 100, marginTop: 8 }}
-          placeholder="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266&#10;0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-        />
-      </div>
-
+      {/* Token URI输入 */}
       <div style={{ marginBottom: 16 }}>
         <label>NFT元数据URI: </label>
-        <input 
-          value={tokenUri} 
-          onChange={(e) => setTokenUri(e.target.value)} 
-          style={{ width: 300, marginLeft: 8 }}
+        <input
+          value={tokenUri}
+          onChange={(e) => setTokenUri(e.target.value)}
+          style={{ width: 300, marginLeft: 8, padding: '4px 8px' }}
           placeholder="ipfs://metadata"
         />
       </div>
 
+      {/* 铸造按钮 */}
       <div style={{ marginBottom: 16 }}>
-        <button 
-          onClick={handleSingleMint} 
-          disabled={isProcessing}
-          style={{ marginRight: 8, padding: '8px 16px' }}
+        <button
+          onClick={handleMint}
+          disabled={isMinting}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: isMinting ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: 4,
+            cursor: isMinting ? 'not-allowed' : 'pointer'
+          }}
         >
-          {isProcessing ? '铸造中...' : '单个铸造'}
+          {isMinting ? '铸造中...' : '铸造NFT'}
         </button>
-        
-        <button 
-          onClick={handleBatchMint} 
-          disabled={isProcessing}
-          style={{ marginRight: 8, padding: '8px 16px' }}
-        >
-          {isProcessing ? '批量铸造中...' : '批量铸造'}
-        </button>
-
-        {isMinting && (
-          <button 
-            onClick={() => {
-              console.log('手动重置铸造状态')
-              setIsMinting(false)
-            }}
-            style={{ padding: '8px 16px', backgroundColor: '#ff6b6b', color: 'white' }}
-          >
-            重置状态
-          </button>
-        )}
       </div>
 
-      {hash && (
-        <div style={{ marginTop: 16 }}>
-          <div>交易哈希: {hash}</div>
-          <div>状态: {isConfirming ? '确认中...' : isConfirmed ? '✅ 成功' : '⏳ 等待确认'}</div>
+      {/* 结果显示 */}
+      {mintResult && (
+        <div style={{
+          marginTop: 16,
+          padding: 10,
+          borderRadius: 4,
+          backgroundColor: mintResult.startsWith('✅') ? '#d4edda' : '#f8d7da',
+          color: mintResult.startsWith('✅') ? '#155724' : '#721c24',
+          whiteSpace: 'pre-wrap'
+        }}>
+          {mintResult}
         </div>
       )}
 
-      {error && (
-        <div style={{ marginTop: 16, color: 'red' }}>
-          错误: {error.message}
-        </div>
-      )}
-
-      <div style={{ marginTop: 16, fontSize: 12, color: '#666' }}>
-        <div>当前连接地址: {address}</div>
+      {/* 调试信息 */}
+      <div style={{ marginTop: 20, fontSize: 12, color: '#666' }}>
         <div>合约地址: {contractAddress}</div>
-        <div>注意: 只有合约所有者才能执行铸造操作</div>
+        <div>当前地址: {address}</div>
+        <div>选择课程: {selectedCourseId || '未选择'}</div>
+        <div>选择课次: {selectedSessionId || '未选择'}</div>
       </div>
     </div>
   )

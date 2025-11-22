@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { Navbar } from './Navbar'
 import { StudentCheckin } from './StudentCheckin'
-import { AttendanceStatus } from './AttendanceStatus'
+import { StudentAttendanceRecords } from './StudentAttendanceRecords'
 
 type StudentTab = 'overview' | 'checkin' | 'records'
 
@@ -259,7 +259,7 @@ export function StudentDashboard() {
               <h2>📋 我的出勤记录</h2>
               <p>查看您的所有出勤记录和获得的NFT</p>
             </div>
-            <AttendanceStatus />
+            <StudentAttendanceRecords />
           </div>
         )
 
