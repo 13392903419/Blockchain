@@ -11,6 +11,7 @@ export interface Session {
   id: string;
   courseId: string;
   sessionNumber: number; // 课程内的课次序号，用于显示
+  globalSessionId?: number; // 全局唯一的数字ID，用于区块链
   name: string;
   description?: string;
   startTime: number;

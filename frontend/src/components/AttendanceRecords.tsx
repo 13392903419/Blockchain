@@ -150,63 +150,91 @@ export function AttendanceRecords() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-        <h3>出勤记录查询</h3>
-        <p>请先连接钱包并登录</p>
-        <button onClick={login}>登录</button>
+      <div className="attendance-records-container">
+        <div className="auth-required-card">
+          <div className="auth-icon">🔒</div>
+          <h3>需要登录</h3>
+          <p>请先连接钱包并登录以查看出勤记录</p>
+          <button className="auth-button" onClick={login}>
+            <span className="button-icon">🔑</span>
+            连接钱包登录
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-      <h3>出勤记录查询</h3>
+    <div className="attendance-records-container">
+      {/* 页面标题 */}
+      <div className="page-header">
+        <div className="header-icon">📋</div>
+        <div className="header-content">
+          <h2>出勤记录查询</h2>
+          <p>查看和管理学生的出勤情况，追踪NFT铸造记录</p>
+        </div>
+      </div>
 
-      {/* 筛选器 */}
-      <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div>
-          <label style={{ marginRight: 8 }}>选择课程（可选）: </label>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            style={{ padding: '4px 8px', minWidth: '200px' }}
-          >
-            <option value="">全部课程</option>
-            {courses.map(course => (
-              <option key={course.id} value={course.id}>
-                {course.name}
-              </option>
-            ))}
-          </select>
+      {/* 筛选器卡片 */}
+      <div className="filters-card">
+        <div className="card-header">
+          <div className="card-icon">🔍</div>
+          <h3>筛选条件</h3>
         </div>
 
-        {selectedCourseId && (
-          <div>
-            <label style={{ marginRight: 8 }}>选择课次（可选）: </label>
+        <div className="filters-grid">
+          <div className="filter-group">
+            <label className="filter-label">选择课程</label>
             <select
-              value={selectedSessionId}
-              onChange={(e) => setSelectedSessionId(e.target.value)}
-              style={{ padding: '4px 8px', minWidth: '200px' }}
+              className="modern-select"
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
             >
-              <option value="">该课程全部课次</option>
-              {sessions.map(session => (
-                <option key={session.id} value={session.id}>
-                  {session.name}
+              <option value="">全部课程</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
                 </option>
               ))}
             </select>
           </div>
-        )}
 
-        <div>
-          <button
-            onClick={loadRecords}
-            disabled={loading}
-            style={{ padding: '4px 12px' }}
-          >
-            {loading ? '加载中...' : '查询'}
-          </button>
-          <span style={{ marginLeft: 12, fontSize: '12px', color: '#666' }}>
+          {selectedCourseId && (
+            <div className="filter-group">
+              <label className="filter-label">选择课次</label>
+              <select
+                className="modern-select"
+                value={selectedSessionId}
+                onChange={(e) => setSelectedSessionId(e.target.value)}
+              >
+                <option value="">该课程全部课次</option>
+                {sessions.map(session => (
+                  <option key={session.id} value={session.id}>
+                    {session.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="filter-actions">
+            <button
+              className="primary-button"
+              onClick={loadRecords}
+              disabled={loading}
+            >
+              <span className="button-icon">
+                {loading ? '⏳' : '🔍'}
+              </span>
+              {loading ? '查询中...' : '查询记录'}
+            </button>
+          </div>
+        </div>
+
+        {/* 当前筛选状态 */}
+        <div className="filter-status">
+          <span className="status-icon">ℹ️</span>
+          <span className="status-text">
             {!selectedCourseId && !selectedSessionId && '显示全部出勤记录'}
             {selectedCourseId && !selectedSessionId && `显示 ${courses.find(c => c.id === selectedCourseId)?.name} 课程的全部课次记录`}
             {selectedSessionId && `显示 ${sessions.find(s => s.id === selectedSessionId)?.name} 的出勤记录`}
@@ -214,92 +242,184 @@ export function AttendanceRecords() {
         </div>
       </div>
 
-      {/* 出勤记录列表 */}
-      <div>
-        <h4>出勤记录 ({records.length} 条)</h4>
-        {records.length === 0 ? (
-          <p style={{ color: '#666' }}>暂无出勤记录</p>
-        ) : (
-          <div style={{ maxHeight: 500, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f5f5f5' }}>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>课次</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>学生地址</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>Token ID</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>状态</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>时间</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>交易哈希</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record) => {
-                  // 显示友好的课次信息：从sessionId中提取序号
-                  const sessionNumber = record.sessionId.includes('-') ? record.sessionId.split('-')[1] : record.sessionId
-                  const displayText = `第${sessionNumber}次课`
+      {/* 出勤记录统计 */}
+      <div className="stats-overview">
+        <div className="stat-card">
+          <div className="stat-icon">📊</div>
+          <div className="stat-content">
+            <div className="stat-number">{records.length}</div>
+            <div className="stat-label">总记录数</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">✅</div>
+          <div className="stat-content">
+            <div className="stat-number">
+              {records.filter(r => r.status === 'present').length}
+            </div>
+            <div className="stat-label">出勤次数</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">📈</div>
+          <div className="stat-content">
+            <div className="stat-number">
+              {records.length > 0
+                ? ((records.filter(r => r.status === 'present').length / records.length) * 100).toFixed(1)
+                : '0.0'
+              }%
+            </div>
+            <div className="stat-label">出勤率</div>
+          </div>
+        </div>
+      </div>
 
-                  return (
-                    <tr key={record.id}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{displayText}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', fontSize: '12px' }}>
-                        {`${record.studentAddress.slice(0, 6)}...${record.studentAddress.slice(-4)}`}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {record.tokenId || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        <span style={{
-                          color: record.status === 'present' ? '#28a745' : '#dc3545',
-                          fontWeight: 'bold'
-                        }}>
-                          {record.status === 'present' ? '✅ 已出勤' : '❌ 缺勤'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {new Date(record.timestamp).toLocaleString()}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', fontSize: '12px' }}>
-                        {`${record.txHash.slice(0, 10)}...${record.txHash.slice(-8)}`}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+      {/* 出勤记录表格 */}
+      <div className="records-table-card">
+        <div className="card-header">
+          <div className="card-icon">📋</div>
+          <h3>出勤记录详情</h3>
+          <div className="records-count">
+            <span className="count-badge">{records.length}</span>
+            <span className="count-label">条记录</span>
+          </div>
+        </div>
+
+        {records.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📋</div>
+            <h4>暂无出勤记录</h4>
+            <p>请调整筛选条件或等待学生出勤记录</p>
+          </div>
+        ) : (
+          <>
+            <div className="table-container">
+              <table className="attendance-table">
+                <thead>
+                  <tr>
+                    <th>课次</th>
+                    <th>学生地址</th>
+                    <th>Token ID</th>
+                    <th>出勤状态</th>
+                    <th>记录时间</th>
+                    <th>交易哈希</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record) => {
+                    // 显示友好的课次信息：从sessionId中提取序号
+                    const sessionNumber = record.sessionId.includes('-') ? record.sessionId.split('-')[1] : record.sessionId
+                    const displayText = `第${sessionNumber}次课`
+
+                    return (
+                      <tr key={record.id} className={record.status === 'present' ? 'present-row' : 'absent-row'}>
+                        <td className="session-cell">
+                          <div className="session-badge">{displayText}</div>
+                        </td>
+                        <td className="address-cell">
+                          <code className="address-code">
+                            {`${record.studentAddress.slice(0, 6)}...${record.studentAddress.slice(-4)}`}
+                          </code>
+                          <button
+                            className="copy-button"
+                            onClick={() => navigator.clipboard.writeText(record.studentAddress)}
+                            title="复制完整地址"
+                          >
+                            📋
+                          </button>
+                        </td>
+                        <td className="token-cell">
+                          {record.tokenId ? (
+                            <code className="token-code">#{record.tokenId}</code>
+                          ) : (
+                            <span className="no-token">-</span>
+                          )}
+                        </td>
+                        <td className="status-cell">
+                          <div className={`status-badge ${record.status === 'present' ? 'present' : 'absent'}`}>
+                            <span className="status-icon">
+                              {record.status === 'present' ? '✅' : '❌'}
+                            </span>
+                            <span className="status-text">
+                              {record.status === 'present' ? '已出勤' : '缺勤'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="time-cell">
+                          <div className="timestamp">
+                            {new Date(record.timestamp).toLocaleString('zh-CN')}
+                          </div>
+                        </td>
+                        <td className="hash-cell">
+                          <code className="hash-code">
+                            {`${record.txHash.slice(0, 10)}...${record.txHash.slice(-8)}`}
+                          </code>
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${record.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="external-link"
+                            title="在Etherscan上查看"
+                          >
+                            🔗
+                          </a>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
 
             {/* 分页控件 */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', padding: '8px' }}>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                style={{ padding: '4px 12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-              >
-                上一页
-              </button>
-              <span>
-                第 {currentPage} 页 / 共 {Math.ceil(records.length / pageSize) || 1} 页
-              </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(Math.ceil(records.length / pageSize), p + 1))}
-                disabled={currentPage >= Math.ceil(records.length / pageSize)}
-                style={{ padding: '4px 12px', cursor: currentPage >= Math.ceil(records.length / pageSize) ? 'not-allowed' : 'pointer' }}
-              >
-                下一页
-              </button>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                style={{ padding: '4px' }}
-              >
-                <option value={10}>10条/页</option>
-                <option value={20}>20条/页</option>
-                <option value={50}>50条/页</option>
-              </select>
+            <div className="pagination-container">
+              <div className="pagination-info">
+                <span className="page-info">
+                  第 {currentPage} 页 / 共 {Math.ceil(records.length / pageSize) || 1} 页
+                </span>
+                <span className="total-info">
+                  共 {records.length} 条记录
+                </span>
+              </div>
+
+              <div className="pagination-controls">
+                <button
+                  className="pagination-button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <span className="button-icon">⬅️</span>
+                  上一页
+                </button>
+
+                <div className="page-size-selector">
+                  <label>每页显示:</label>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="page-size-select"
+                  >
+                    <option value={10}>10条</option>
+                    <option value={20}>20条</option>
+                    <option value={50}>50条</option>
+                    <option value={100}>100条</option>
+                  </select>
+                </div>
+
+                <button
+                  className="pagination-button"
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(records.length / pageSize), p + 1))}
+                  disabled={currentPage >= Math.ceil(records.length / pageSize)}
+                >
+                  下一页
+                  <span className="button-icon">➡️</span>
+                </button>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

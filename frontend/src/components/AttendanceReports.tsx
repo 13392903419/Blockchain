@@ -115,206 +115,387 @@ export function AttendanceReports() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-        <h3>出勤统计报表</h3>
-        <p>请先登录以查看统计报表</p>
-        <button onClick={login} style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: 4 }}>
-          登录
-        </button>
+      <div className="attendance-reports-container">
+        <div className="auth-required-card">
+          <div className="auth-icon">🔒</div>
+          <h3>需要登录</h3>
+          <p>请先连接钱包并登录以查看统计报表</p>
+          <button className="auth-button" onClick={login}>
+            <span className="button-icon">🔑</span>
+            连接钱包登录
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-      <h3>📊 出勤统计报表</h3>
-      
-      {/* 标签页 */}
-      <div style={{ marginBottom: 20, borderBottom: '1px solid #eee' }}>
+    <div className="attendance-reports-container">
+      {/* 页面标题 */}
+      <div className="page-header">
+        <div className="header-icon">📊</div>
+        <div className="header-content">
+          <h2>出勤统计报表</h2>
+          <p>多维度分析出勤数据，掌握教学效果和学生参与情况</p>
+        </div>
+      </div>
+
+      {/* 标签页导航 */}
+      <div className="reports-tabs">
         <button
+          className={`tab-button ${activeTab === 'course' ? 'active' : ''}`}
           onClick={() => setActiveTab('course')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: activeTab === 'course' ? '#007bff' : 'transparent',
-            color: activeTab === 'course' ? 'white' : '#007bff',
-            border: 'none',
-            borderRadius: '4px 4px 0 0',
-            marginRight: 8,
-            cursor: 'pointer'
-          }}
         >
-          按课程统计
+          <span className="tab-icon">📚</span>
+          <span className="tab-text">按课程统计</span>
         </button>
         <button
+          className={`tab-button ${activeTab === 'student' ? 'active' : ''}`}
           onClick={() => setActiveTab('student')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: activeTab === 'student' ? '#007bff' : 'transparent',
-            color: activeTab === 'student' ? 'white' : '#007bff',
-            border: 'none',
-            borderRadius: '4px 4px 0 0',
-            marginRight: 8,
-            cursor: 'pointer'
-          }}
         >
-          按学生统计
+          <span className="tab-icon">👨‍🎓</span>
+          <span className="tab-text">按学生统计</span>
         </button>
         <button
+          className={`tab-button ${activeTab === 'time' ? 'active' : ''}`}
           onClick={() => setActiveTab('time')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: activeTab === 'time' ? '#007bff' : 'transparent',
-            color: activeTab === 'time' ? 'white' : '#007bff',
-            border: 'none',
-            borderRadius: '4px 4px 0 0',
-            cursor: 'pointer'
-          }}
         >
-          按时间统计
+          <span className="tab-icon">📅</span>
+          <span className="tab-text">按时间统计</span>
         </button>
       </div>
 
       {/* 加载状态 */}
       {loading && (
-        <div style={{ textAlign: 'center', padding: 20 }}>
-          <span>正在加载数据...</span>
+        <div className="loading-card">
+          <div className="loading-spinner"></div>
+          <p>正在加载统计数据...</p>
         </div>
       )}
 
       {/* 课程统计 */}
       {activeTab === 'course' && !loading && (
-        <div>
-          <h4>📚 课程出勤统计</h4>
-          {courseStats.length === 0 ? (
-            <p>暂无课程数据</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16 }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f8f9fa' }}>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'left' }}>课程名称</th>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>课次总数</th>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>学生总数</th>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>平均出勤率</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courseStats.map((course, index) => (
-                    <tr key={course.courseId} style={{ backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white' }}>
-                      <td style={{ padding: 12, border: '1px solid #ddd' }}>{course.courseName}</td>
-                      <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>{course.totalSessions}</td>
-                      <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>{course.totalStudents}</td>
-                      <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>
-                        <span style={{ 
-                          color: course.averageAttendanceRate >= 80 ? '#28a745' : 
-                                course.averageAttendanceRate >= 60 ? '#ffc107' : '#dc3545',
-                          fontWeight: 'bold'
-                        }}>
-                          {course.averageAttendanceRate.toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="report-section">
+          <div className="section-header">
+            <div className="section-icon">📚</div>
+            <h3>课程出勤统计</h3>
+            <div className="courses-count">
+              <span className="count-badge">{courseStats.length}</span>
+              <span className="count-label">个课程</span>
             </div>
+          </div>
+
+          {courseStats.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📚</div>
+              <h4>暂无课程数据</h4>
+              <p>请先创建课程并录入出勤记录</p>
+            </div>
+          ) : (
+            <>
+              {/* 课程统计卡片概览 */}
+              <div className="stats-overview">
+                <div className="overview-card">
+                  <div className="overview-icon">📚</div>
+                  <div className="overview-content">
+                    <div className="overview-number">{courseStats.length}</div>
+                    <div className="overview-label">总课程数</div>
+                  </div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">🕒</div>
+                  <div className="overview-content">
+                    <div className="overview-number">
+                      {courseStats.reduce((sum, course) => sum + course.totalSessions, 0)}
+                    </div>
+                    <div className="overview-label">总课次数</div>
+                  </div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">👥</div>
+                  <div className="overview-content">
+                    <div className="overview-number">
+                      {courseStats.reduce((sum, course) => sum + course.totalStudents, 0)}
+                    </div>
+                    <div className="overview-label">累计学生数</div>
+                  </div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">📈</div>
+                  <div className="overview-content">
+                    <div className="overview-number">
+                      {courseStats.length > 0
+                        ? (courseStats.reduce((sum, course) => sum + course.averageAttendanceRate, 0) / courseStats.length).toFixed(1)
+                        : '0.0'
+                      }%
+                    </div>
+                    <div className="overview-label">平均出勤率</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 课程详细表格 */}
+              <div className="table-container">
+                <table className="reports-table">
+                  <thead>
+                    <tr>
+                      <th>课程名称</th>
+                      <th>课次总数</th>
+                      <th>学生总数</th>
+                      <th>平均出勤率</th>
+                      <th>出勤趋势</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseStats.map((course, index) => (
+                      <tr key={course.courseId} className={index % 2 === 0 ? 'even-row' : 'odd-row'}>
+                        <td className="course-name-cell">
+                          <div className="course-name">{course.courseName}</div>
+                        </td>
+                        <td className="data-cell">
+                          <div className="data-value">{course.totalSessions}</div>
+                          <div className="data-label">课次</div>
+                        </td>
+                        <td className="data-cell">
+                          <div className="data-value">{course.totalStudents}</div>
+                          <div className="data-label">学生</div>
+                        </td>
+                        <td className="rate-cell">
+                          <div className={`rate-badge ${course.averageAttendanceRate >= 80 ? 'excellent' :
+                                                      course.averageAttendanceRate >= 60 ? 'good' : 'poor'}`}>
+                            {course.averageAttendanceRate.toFixed(1)}%
+                          </div>
+                        </td>
+                        <td className="trend-cell">
+                          <div className="mini-bar">
+                            <div
+                              className="mini-bar-fill"
+                              style={{
+                                width: `${Math.min(course.averageAttendanceRate, 100)}%`,
+                                background: course.averageAttendanceRate >= 80 ? '#22c55e' :
+                                           course.averageAttendanceRate >= 60 ? '#f59e0b' : '#ef4444'
+                              }}
+                            ></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* 学生统计 */}
       {activeTab === 'student' && !loading && (
-        <div>
-          <h4>👨‍🎓 学生出勤统计</h4>
-          {studentStats.length === 0 ? (
-            <p>暂无学生数据</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16 }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f8f9fa' }}>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'left' }}>学生地址</th>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>参与课次</th>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>出勤次数</th>
-                    <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>出勤率</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {studentStats.map((student, index) => (
-                    <tr key={student.studentAddress} style={{ backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white' }}>
-                      <td style={{ padding: 12, border: '1px solid #ddd', fontFamily: 'monospace', fontSize: '12px' }}>
-                        {student.studentAddress.slice(0, 6)}...{student.studentAddress.slice(-4)}
-                      </td>
-                      <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>{student.totalSessions}</td>
-                      <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>{student.attendedSessions}</td>
-                      <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>
-                        <span style={{ 
-                          color: student.attendanceRate >= 80 ? '#28a745' : 
-                                student.attendanceRate >= 60 ? '#ffc107' : '#dc3545',
-                          fontWeight: 'bold'
-                        }}>
-                          {student.attendanceRate.toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="report-section">
+          <div className="section-header">
+            <div className="section-icon">👨‍🎓</div>
+            <h3>学生出勤统计</h3>
+            <div className="students-count">
+              <span className="count-badge">{studentStats.length}</span>
+              <span className="count-label">个学生</span>
             </div>
+          </div>
+
+          {studentStats.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">👨‍🎓</div>
+              <h4>暂无学生数据</h4>
+              <p>学生出勤记录将在这里显示</p>
+            </div>
+          ) : (
+            <>
+              {/* 学生统计概览 */}
+              <div className="stats-overview">
+                <div className="overview-card">
+                  <div className="overview-icon">👥</div>
+                  <div className="overview-content">
+                    <div className="overview-number">{studentStats.length}</div>
+                    <div className="overview-label">活跃学生</div>
+                  </div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">✅</div>
+                  <div className="overview-content">
+                    <div className="overview-number">
+                      {studentStats.reduce((sum, student) => sum + student.attendedSessions, 0)}
+                    </div>
+                    <div className="overview-label">总出勤次数</div>
+                  </div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">📊</div>
+                  <div className="overview-content">
+                    <div className="overview-number">
+                      {studentStats.length > 0
+                        ? (studentStats.reduce((sum, student) => sum + student.attendanceRate, 0) / studentStats.length).toFixed(1)
+                        : '0.0'
+                      }%
+                    </div>
+                    <div className="overview-label">平均出勤率</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 学生详细表格 */}
+              <div className="table-container">
+                <table className="reports-table">
+                  <thead>
+                    <tr>
+                      <th>学生地址</th>
+                      <th>参与课次</th>
+                      <th>出勤次数</th>
+                      <th>出勤率</th>
+                      <th>表现等级</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {studentStats.map((student, index) => (
+                      <tr key={student.studentAddress} className={index % 2 === 0 ? 'even-row' : 'odd-row'}>
+                        <td className="student-cell">
+                          <div className="student-address">
+                            <code>{student.studentAddress.slice(0, 6)}...{student.studentAddress.slice(-4)}</code>
+                            <button
+                              className="copy-button"
+                              onClick={() => navigator.clipboard.writeText(student.studentAddress)}
+                              title="复制完整地址"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        </td>
+                        <td className="data-cell">
+                          <div className="data-value">{student.totalSessions}</div>
+                          <div className="data-label">课次</div>
+                        </td>
+                        <td className="data-cell">
+                          <div className="data-value">{student.attendedSessions}</div>
+                          <div className="data-label">出勤</div>
+                        </td>
+                        <td className="rate-cell">
+                          <div className={`rate-badge ${student.attendanceRate >= 80 ? 'excellent' :
+                                                      student.attendanceRate >= 60 ? 'good' : 'poor'}`}>
+                            {student.attendanceRate.toFixed(1)}%
+                          </div>
+                        </td>
+                        <td className="grade-cell">
+                          <div className={`grade-badge ${student.attendanceRate >= 90 ? 'excellent' :
+                                                        student.attendanceRate >= 80 ? 'good' :
+                                                        student.attendanceRate >= 70 ? 'average' : 'poor'}`}>
+                            {student.attendanceRate >= 90 ? '优秀' :
+                             student.attendanceRate >= 80 ? '良好' :
+                             student.attendanceRate >= 70 ? '一般' : '需改进'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* 时间统计 */}
       {activeTab === 'time' && !loading && (
-        <div>
-          <h4>📅 时间维度统计</h4>
+        <div className="report-section">
+          <div className="section-header">
+            <div className="section-icon">📅</div>
+            <h3>时间维度统计</h3>
+          </div>
+
           {!timeStats ? (
-            <p>暂无时间统计数据</p>
+            <div className="empty-state">
+              <div className="empty-icon">📅</div>
+              <h4>暂无时间统计数据</h4>
+              <p>时间统计数据将在这里显示</p>
+            </div>
           ) : (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
-                <div style={{ padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, textAlign: 'center' }}>
-                  <h5 style={{ margin: 0, color: '#6c757d' }}>总课次</h5>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{timeStats.totalSessions}</div>
+            <>
+              {/* 时间统计概览卡片 */}
+              <div className="time-stats-grid">
+                <div className="time-stat-card">
+                  <div className="stat-card-icon">🕒</div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-number">{timeStats.totalSessions}</div>
+                    <div className="stat-card-label">总课次</div>
+                  </div>
                 </div>
-                <div style={{ padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, textAlign: 'center' }}>
-                  <h5 style={{ margin: 0, color: '#6c757d' }}>总出勤</h5>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>{timeStats.totalAttendance}</div>
+                <div className="time-stat-card">
+                  <div className="stat-card-icon">✅</div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-number">{timeStats.totalAttendance}</div>
+                    <div className="stat-card-label">总出勤</div>
+                  </div>
                 </div>
-                <div style={{ padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, textAlign: 'center' }}>
-                  <h5 style={{ margin: 0, color: '#6c757d' }}>平均出勤率</h5>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffc107' }}>{timeStats.averageRate.toFixed(1)}%</div>
+                <div className="time-stat-card">
+                  <div className="stat-card-icon">📈</div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-number">{timeStats.averageRate.toFixed(1)}%</div>
+                    <div className="stat-card-label">平均出勤率</div>
+                  </div>
                 </div>
               </div>
-              
+
+              {/* 出勤趋势图表 */}
               {timeStats.trends.length > 0 && (
-                <div>
-                  <h5>📈 出勤趋势</h5>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="trends-section">
+                  <div className="section-header">
+                    <div className="section-icon">📈</div>
+                    <h4>出勤趋势分析</h4>
+                    <div className="trends-count">
+                      <span className="count-badge">{timeStats.trends.length}</span>
+                      <span className="count-label">个数据点</span>
+                    </div>
+                  </div>
+
+                  <div className="table-container">
+                    <table className="trends-table">
                       <thead>
-                        <tr style={{ backgroundColor: '#f8f9fa' }}>
-                          <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'left' }}>日期</th>
-                          <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>课次</th>
-                          <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>出勤</th>
-                          <th style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>出勤率</th>
+                        <tr>
+                          <th>日期</th>
+                          <th>课次数量</th>
+                          <th>出勤人数</th>
+                          <th>出勤率</th>
+                          <th>趋势指标</th>
                         </tr>
                       </thead>
                       <tbody>
                         {timeStats.trends.map((trend, index) => (
-                          <tr key={trend.date} style={{ backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white' }}>
-                            <td style={{ padding: 12, border: '1px solid #ddd' }}>{trend.date}</td>
-                            <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>{trend.sessions}</td>
-                            <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>{trend.attendance}</td>
-                            <td style={{ padding: 12, border: '1px solid #ddd', textAlign: 'center' }}>
-                              <span style={{ 
-                                color: trend.rate >= 80 ? '#28a745' : 
-                                      trend.rate >= 60 ? '#ffc107' : '#dc3545',
-                                fontWeight: 'bold'
-                              }}>
+                          <tr key={trend.date} className={index % 2 === 0 ? 'even-row' : 'odd-row'}>
+                            <td className="date-cell">
+                              <div className="date-display">{trend.date}</div>
+                            </td>
+                            <td className="data-cell">
+                              <div className="data-value">{trend.sessions}</div>
+                              <div className="data-label">课次</div>
+                            </td>
+                            <td className="data-cell">
+                              <div className="data-value">{trend.attendance}</div>
+                              <div className="data-label">出勤</div>
+                            </td>
+                            <td className="rate-cell">
+                              <div className={`rate-badge ${trend.rate >= 80 ? 'excellent' :
+                                                        trend.rate >= 60 ? 'good' : 'poor'}`}>
                                 {trend.rate.toFixed(1)}%
-                              </span>
+                              </div>
+                            </td>
+                            <td className="trend-cell">
+                              <div className="trend-bar">
+                                <div
+                                  className="trend-bar-fill"
+                                  style={{
+                                    width: `${Math.min(trend.rate, 100)}%`,
+                                    background: trend.rate >= 80 ? 'linear-gradient(90deg, #22c55e, #16a34a)' :
+                                               trend.rate >= 60 ? 'linear-gradient(90deg, #f59e0b, #d97706)' :
+                                               'linear-gradient(90deg, #ef4444, #dc2626)'
+                                  }}
+                                ></div>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -323,7 +504,7 @@ export function AttendanceReports() {
                   </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       )}
