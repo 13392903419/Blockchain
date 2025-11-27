@@ -7,6 +7,7 @@ import { useAuth } from './hooks/useAuth'
 import { LoginPage } from './components/LoginPage'
 import { TeacherDashboard } from './components/TeacherDashboard'
 import { StudentDashboard } from './components/StudentDashboard'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const config = createConfig({
   chains: [localhost],
@@ -50,7 +51,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config} reconnectOnMount>
-        <AppContent />
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
       </WagmiProvider>
     </QueryClientProvider>
   )

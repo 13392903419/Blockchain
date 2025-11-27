@@ -3,8 +3,11 @@ import { useAuth } from '../hooks/useAuth'
 import { Navbar } from './Navbar'
 import { StudentCheckin } from './StudentCheckin'
 import { StudentAttendanceRecords } from './StudentAttendanceRecords'
+import { Showcase } from './Showcase'
+import { StudentWorkMint } from './StudentWorkMint'
+import { AccessPassMarket } from './AccessPassMarket'
 
-type StudentTab = 'overview' | 'checkin' | 'records'
+type StudentTab = 'overview' | 'checkin' | 'records' | 'showcase' | 'work' | 'market'
 
 export function StudentDashboard() {
   const { address, userRole, logout, getAuthHeaders, token } = useAuth()
@@ -19,7 +22,10 @@ export function StudentDashboard() {
   const tabs = [
     { id: 'overview' as StudentTab, label: '📊 概览', icon: '📊' },
     { id: 'checkin' as StudentTab, label: '📱 签到', icon: '📱' },
-    { id: 'records' as StudentTab, label: '📋 我的记录', icon: '📋' }
+    { id: 'records' as StudentTab, label: '📋 我的记录', icon: '📋' },
+    { id: 'showcase' as StudentTab, label: '🎓 我的展示', icon: '🎓' },
+    { id: 'work' as StudentTab, label: '🎨 铸造作品', icon: '🎨' },
+    { id: 'market' as StudentTab, label: '🎟️ 权益市场', icon: '🎟️' }
   ]
 
   // 获取学生统计数据
@@ -116,18 +122,26 @@ export function StudentDashboard() {
         return (
           <div className="dashboard-content">
             <div className="welcome-section">
-              <h1>👨‍🎓 学生中心</h1>
-              <p>欢迎使用区块链出勤系统！在这里进行签到并查看您的出勤记录。</p>
-              <div className="user-info-card">
-                <div className="user-avatar">👨‍🎓</div>
+              <div className="welcome-header">
+                <div className="welcome-icon">👨‍🎓</div>
+                <div className="welcome-text">
+                  <h1>学生中心</h1>
+                  <p>欢迎使用区块链出勤系统，开启您的数字学习之旅</p>
+                </div>
+              </div>
+              <div className="user-info-card student-card">
+                <div className="user-avatar student-avatar">
+                  👨‍🎓
+                </div>
                 <div className="user-details">
                   <h3>学生账户</h3>
                   <p className="user-address">
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </p>
-                  <p className="user-role">角色: {userRole === 'student' ? '学生' : '未知'}</p>
+                  <p className="user-role">角色：学生</p>
                 </div>
                 <button className="logout-btn" onClick={() => logout()}>
+                  <span className="button-icon">🚪</span>
                   退出登录
                 </button>
               </div>
@@ -137,40 +151,42 @@ export function StudentDashboard() {
               <div className="overview-card featured">
                 <div className="card-header">
                   <div className="card-icon">📱</div>
-                  <h3>快速签到</h3>
+                  <h3>出勤查询</h3>
                 </div>
-                <p>点击下方按钮开始今天的签到</p>
+                <p>选择课程和课次，查询您的出勤记录</p>
                 <button
                   className="action-btn primary large"
                   onClick={() => setActiveTab('checkin')}
                 >
-                  🚀 开始签到
+                  <span className="button-icon">🔍</span>
+                  开始查询
                 </button>
               </div>
 
               <div className="overview-card">
                 <div className="card-header">
                   <div className="card-icon">📊</div>
-                  <h3>出勤概览</h3>
+                  <h3>我的记录</h3>
                 </div>
-                <p>查看您的出勤统计和NFT收集情况</p>
+                <p>查看详细的出勤历史和NFT收藏</p>
                 <button
                   className="action-btn secondary"
                   onClick={() => setActiveTab('records')}
                 >
-                  查看详情
+                  <span className="button-icon">📋</span>
+                  查看记录
                 </button>
               </div>
 
               <div className="overview-card">
                 <div className="card-header">
                   <div className="card-icon">🎯</div>
-                  <h3>今日任务</h3>
+                  <h3>学习目标</h3>
                 </div>
                 <div className="task-list">
                   <div className="task-item">
                     <span className="task-status">⏰</span>
-                    <span>等待签到时间窗口开启</span>
+                    <span>及时查询出勤状态</span>
                   </div>
                   <div className="task-item">
                     <span className="task-status">🎓</span>
@@ -191,7 +207,7 @@ export function StudentDashboard() {
                   <div className="stat-number">
                     {loadingStats ? '...' : studentStats.todayCheckin}
                   </div>
-                  <div className="stat-label">今日签到</div>
+                  <div className="stat-label">今日查询</div>
                 </div>
               </div>
               <div className="stat-card">
@@ -216,24 +232,24 @@ export function StudentDashboard() {
 
             <div className="motivation-section">
               <div className="motivation-card">
-                <h3>💪 保持良好出勤习惯</h3>
+                <h3>💪 区块链学习新体验</h3>
                 <p>
-                  规律的出勤不仅能帮助您获得更好的学习成绩，
-                  还能通过区块链技术永久记录您的学习轨迹。
-                  每个签到都是您努力的见证！
+                  区块链技术让您的每一次出勤都成为永久的数字记录，
+                  不只是一次签到，更是一份值得珍藏的学习见证。
+                  开启您的区块链学习之旅！
                 </p>
                 <div className="motivation-tips">
                   <div className="tip">
                     <span className="tip-icon">🎯</span>
-                    <span>准时签到，养成良好习惯</span>
+                    <span>及时查询，掌握出勤动态</span>
                   </div>
                   <div className="tip">
                     <span className="tip-icon">🔒</span>
-                    <span>区块链记录，不可篡改</span>
+                    <span>区块链记录，永久保存</span>
                   </div>
                   <div className="tip">
                     <span className="tip-icon">🏆</span>
-                    <span>NFT凭证，永久保存</span>
+                    <span>NFT凭证，数字纪念</span>
                   </div>
                 </div>
               </div>
@@ -260,6 +276,27 @@ export function StudentDashboard() {
               <p>查看您的所有出勤记录和获得的NFT</p>
             </div>
             <StudentAttendanceRecords />
+          </div>
+        )
+
+      case 'showcase':
+        return (
+          <div className="dashboard-content">
+            <Showcase />
+          </div>
+        )
+
+      case 'work':
+        return (
+          <div className="dashboard-content">
+            <StudentWorkMint />
+          </div>
+        )
+
+      case 'market':
+        return (
+          <div className="dashboard-content">
+            <AccessPassMarket />
           </div>
         )
 

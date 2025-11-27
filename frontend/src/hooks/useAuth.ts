@@ -8,7 +8,7 @@ function parseJwt(token: string) {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
       return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     return JSON.parse(jsonPayload);
@@ -117,11 +117,13 @@ export function useAuth() {
 
   // 获取认证头
   const getAuthHeaders = () => {
+    const storedToken = localStorage.getItem('auth_token');
+    const effectiveToken = token || storedToken;
     const headers = {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(effectiveToken && { 'Authorization': `Bearer ${effectiveToken}` }),
     };
-    console.log('getAuthHeaders called, token exists:', !!token, 'headers:', headers);
+    console.log('getAuthHeaders called, token exists:', !!effectiveToken, 'headers:', headers);
     return headers;
   };
 
@@ -157,7 +159,9 @@ export function useAuth() {
 
   // 当钱包断开连接时清除 token
   useEffect(() => {
+    console.log('Wallet connection status changed:', isConnected);
     if (!isConnected) {
+      console.log('Wallet disconnected, clearing auth state');
       logout();
     }
   }, [isConnected]);

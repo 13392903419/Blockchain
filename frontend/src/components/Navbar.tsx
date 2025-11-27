@@ -1,4 +1,4 @@
-import React from 'react'
+
 
 export function Navbar() {
   return (
@@ -6,14 +6,17 @@ export function Navbar() {
       <div className="navbar-container">
         <div className="brand">
           <span className="brand-icon">🎓</span>
-          NFT 出勤 DApp
+          <span className="brand-text">区块链出勤系统</span>
+          <span className="brand-subtitle">NFT Attendance DApp</span>
         </div>
         <div className="navbar-decoration">
           <div className="glow-effect"></div>
+          <div className="navbar-status">
+            <span className="status-dot"></span>
+            <span className="status-text">系统在线</span>
+          </div>
         </div>
       </div>
     </div>
   )
 }
-
-

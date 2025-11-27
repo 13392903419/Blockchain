@@ -26,7 +26,7 @@ git add todolist
 
 echo.
 echo 2. Committing changes...
-git commit -m "fix the issue of ID"
+git commit -m "finish...delete the attendance function for students"
 
 if %errorlevel% neq 0 (
     echo Git commit failed!

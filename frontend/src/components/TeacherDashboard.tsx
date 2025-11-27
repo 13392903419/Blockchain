@@ -5,8 +5,9 @@ import { CourseManager } from './CourseManager'
 import { AttendanceRecords } from './AttendanceRecords'
 import { AttendanceReports } from './AttendanceReports'
 import { TeacherBatchMint } from './TeacherBatchMint'
+import { TeacherAdvancedPanel } from './TeacherAdvancedPanel'
 
-type TeacherTab = 'overview' | 'courses' | 'records' | 'reports' | 'batch-mint'
+type TeacherTab = 'overview' | 'courses' | 'records' | 'reports' | 'batch-mint' | 'advanced'
 
 export function TeacherDashboard() {
   const { address, userRole, logout, getAuthHeaders, token } = useAuth()
@@ -19,11 +20,12 @@ export function TeacherDashboard() {
   const [loadingStats, setLoadingStats] = useState(true)
 
   const tabs = [
-    { id: 'overview' as TeacherTab, label: '📊 概览', icon: '📊' },
-    { id: 'courses' as TeacherTab, label: '📚 课程管理', icon: '📚' },
-    { id: 'records' as TeacherTab, label: '📋 出勤记录', icon: '📋' },
-    { id: 'reports' as TeacherTab, label: '📈 统计报表', icon: '📈' },
-    { id: 'batch-mint' as TeacherTab, label: '🎓 批量铸造', icon: '🎓' }
+    { id: 'overview' as TeacherTab, label: '概览', icon: '📊' },
+    { id: 'courses' as TeacherTab, label: '课程管理', icon: '📚' },
+    { id: 'records' as TeacherTab, label: '出勤记录', icon: '📋' },
+    { id: 'reports' as TeacherTab, label: '统计报表', icon: '📈' },
+    { id: 'batch-mint' as TeacherTab, label: '批量铸造', icon: '🎓' },
+    { id: 'advanced' as TeacherTab, label: '高级功能', icon: '🛠️' }
   ]
 
   // 获取教师统计数据
@@ -155,35 +157,59 @@ export function TeacherDashboard() {
         return (
           <div className="dashboard-content">
             <div className="welcome-section">
-              <h1>👨‍🏫 教师控制台</h1>
-              <p>欢迎回来，教师！您可以在这里管理课程、出勤记录和查看统计数据。</p>
-              <div className="user-info-card">
-                <div className="user-avatar">👨‍🏫</div>
+              <div className="welcome-header">
+                <div className="welcome-icon">👨‍🏫</div>
+                <div className="welcome-text">
+                  <h1>教师控制台</h1>
+                  <p>欢迎回来，教师！在这里管理您的课程和学生出勤数据</p>
+                </div>
+              </div>
+              <div className="user-info-card teacher-card">
+                <div className="user-avatar teacher-avatar">
+                  👨‍🏫
+                </div>
                 <div className="user-details">
                   <h3>教师账户</h3>
                   <p className="user-address">
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </p>
-                  <p className="user-role">角色: {userRole === 'teacher' ? '教师' : '未知'}</p>
+                  <p className="user-role">角色：教师</p>
                 </div>
                 <button className="logout-btn" onClick={() => logout()}>
+                  <span className="button-icon">🚪</span>
                   退出登录
                 </button>
               </div>
             </div>
 
-            <div className="student-overview-grid">
+            <div className="overview-grid teacher-grid">
               <div className="overview-card featured">
                 <div className="card-header">
                   <div className="card-icon">📚</div>
                   <h3>课程管理</h3>
                 </div>
-                <p>创建和管理您的课程，设置出勤时间窗口</p>
+                <p>创建新课程、添加课次、设置出勤规则</p>
                 <button
                   className="action-btn primary large"
                   onClick={() => setActiveTab('courses')}
                 >
-                  🚀 进入管理
+                  <span className="button-icon">🚀</span>
+                  进入管理
+                </button>
+              </div>
+
+              <div className="overview-card">
+                <div className="card-header">
+                  <div className="card-icon">🎓</div>
+                  <h3>批量铸造</h3>
+                </div>
+                <p>为学生批量铸造出勤NFT，建立区块链凭证</p>
+                <button
+                  className="action-btn secondary"
+                  onClick={() => setActiveTab('batch-mint')}
+                >
+                  <span className="button-icon">⚡</span>
+                  开始铸造
                 </button>
               </div>
 
@@ -192,11 +218,12 @@ export function TeacherDashboard() {
                   <div className="card-icon">📋</div>
                   <h3>出勤记录</h3>
                 </div>
-                <p>查看所有学生的出勤记录和NFT状态</p>
+                <p>查看所有学生的出勤情况和NFT状态</p>
                 <button
                   className="action-btn secondary"
                   onClick={() => setActiveTab('records')}
                 >
+                  <span className="button-icon">📊</span>
                   查看记录
                 </button>
               </div>
@@ -211,21 +238,8 @@ export function TeacherDashboard() {
                   className="action-btn secondary"
                   onClick={() => setActiveTab('reports')}
                 >
+                  <span className="button-icon">📈</span>
                   查看报表
-                </button>
-              </div>
-
-              <div className="overview-card">
-                <div className="card-header">
-                  <div className="card-icon">🎓</div>
-                  <h3>批量铸造</h3>
-                </div>
-                <p>为学生批量铸造出勤NFT凭证</p>
-                <button
-                  className="action-btn secondary"
-                  onClick={() => setActiveTab('batch-mint')}
-                >
-                  开始铸造
                 </button>
               </div>
             </div>
@@ -287,6 +301,13 @@ export function TeacherDashboard() {
         return (
           <div className="dashboard-content">
             <TeacherBatchMint />
+          </div>
+        )
+
+      case 'advanced':
+        return (
+          <div className="dashboard-content">
+            <TeacherAdvancedPanel />
           </div>
         )
 

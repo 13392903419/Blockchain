@@ -34,6 +34,26 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC4906__factory>;
     getContractFactory(
+      name: "ERC1155",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC1155__factory>;
+    getContractFactory(
+      name: "ERC1155Burnable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC1155Burnable__factory>;
+    getContractFactory(
+      name: "IERC1155MetadataURI",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC1155MetadataURI__factory>;
+    getContractFactory(
+      name: "IERC1155",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC1155__factory>;
+    getContractFactory(
+      name: "IERC1155Receiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC1155Receiver__factory>;
+    getContractFactory(
       name: "ERC721",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC721__factory>;
@@ -74,13 +94,41 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Strings__factory>;
     getContractFactory(
+      name: "AccessPassNFT",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AccessPassNFT__factory>;
+    getContractFactory(
       name: "AttendanceNFT",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.AttendanceNFT__factory>;
     getContractFactory(
+      name: "IRoleManager",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IRoleManager__factory>;
+    getContractFactory(
+      name: "AttendanceSynthesizer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AttendanceSynthesizer__factory>;
+    getContractFactory(
+      name: "IAttendanceNFT",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IAttendanceNFT__factory>;
+    getContractFactory(
+      name: "CertificateSBT",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.CertificateSBT__factory>;
+    getContractFactory(
       name: "RoleManager",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.RoleManager__factory>;
+    getContractFactory(
+      name: "StudentPetNFT",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StudentPetNFT__factory>;
+    getContractFactory(
+      name: "StudentWorkNFT",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StudentWorkNFT__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -107,6 +155,31 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IERC4906>;
+    getContractAt(
+      name: "ERC1155",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC1155>;
+    getContractAt(
+      name: "ERC1155Burnable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC1155Burnable>;
+    getContractAt(
+      name: "IERC1155MetadataURI",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC1155MetadataURI>;
+    getContractAt(
+      name: "IERC1155",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC1155>;
+    getContractAt(
+      name: "IERC1155Receiver",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC1155Receiver>;
     getContractAt(
       name: "ERC721",
       address: string | ethers.Addressable,
@@ -158,15 +231,50 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Strings>;
     getContractAt(
+      name: "AccessPassNFT",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AccessPassNFT>;
+    getContractAt(
       name: "AttendanceNFT",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.AttendanceNFT>;
     getContractAt(
+      name: "IRoleManager",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IRoleManager>;
+    getContractAt(
+      name: "AttendanceSynthesizer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AttendanceSynthesizer>;
+    getContractAt(
+      name: "IAttendanceNFT",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IAttendanceNFT>;
+    getContractAt(
+      name: "CertificateSBT",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.CertificateSBT>;
+    getContractAt(
       name: "RoleManager",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.RoleManager>;
+    getContractAt(
+      name: "StudentPetNFT",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StudentPetNFT>;
+    getContractAt(
+      name: "StudentWorkNFT",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StudentWorkNFT>;
 
     deployContract(
       name: "Ownable",
@@ -188,6 +296,26 @@ declare module "hardhat/types/runtime" {
       name: "IERC4906",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC4906>;
+    deployContract(
+      name: "ERC1155",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC1155>;
+    deployContract(
+      name: "ERC1155Burnable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC1155Burnable>;
+    deployContract(
+      name: "IERC1155MetadataURI",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1155MetadataURI>;
+    deployContract(
+      name: "IERC1155",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1155>;
+    deployContract(
+      name: "IERC1155Receiver",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1155Receiver>;
     deployContract(
       name: "ERC721",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -229,13 +357,41 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Strings>;
     deployContract(
+      name: "AccessPassNFT",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AccessPassNFT>;
+    deployContract(
       name: "AttendanceNFT",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.AttendanceNFT>;
     deployContract(
+      name: "IRoleManager",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRoleManager>;
+    deployContract(
+      name: "AttendanceSynthesizer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AttendanceSynthesizer>;
+    deployContract(
+      name: "IAttendanceNFT",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IAttendanceNFT>;
+    deployContract(
+      name: "CertificateSBT",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.CertificateSBT>;
+    deployContract(
       name: "RoleManager",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.RoleManager>;
+    deployContract(
+      name: "StudentPetNFT",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StudentPetNFT>;
+    deployContract(
+      name: "StudentWorkNFT",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StudentWorkNFT>;
 
     deployContract(
       name: "Ownable",
@@ -262,6 +418,31 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC4906>;
+    deployContract(
+      name: "ERC1155",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC1155>;
+    deployContract(
+      name: "ERC1155Burnable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC1155Burnable>;
+    deployContract(
+      name: "IERC1155MetadataURI",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1155MetadataURI>;
+    deployContract(
+      name: "IERC1155",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1155>;
+    deployContract(
+      name: "IERC1155Receiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1155Receiver>;
     deployContract(
       name: "ERC721",
       args: any[],
@@ -313,15 +494,50 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Strings>;
     deployContract(
+      name: "AccessPassNFT",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AccessPassNFT>;
+    deployContract(
       name: "AttendanceNFT",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.AttendanceNFT>;
     deployContract(
+      name: "IRoleManager",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRoleManager>;
+    deployContract(
+      name: "AttendanceSynthesizer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AttendanceSynthesizer>;
+    deployContract(
+      name: "IAttendanceNFT",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IAttendanceNFT>;
+    deployContract(
+      name: "CertificateSBT",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.CertificateSBT>;
+    deployContract(
       name: "RoleManager",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.RoleManager>;
+    deployContract(
+      name: "StudentPetNFT",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StudentPetNFT>;
+    deployContract(
+      name: "StudentWorkNFT",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StudentWorkNFT>;
 
     // default types
     getContractFactory(

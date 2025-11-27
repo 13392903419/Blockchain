@@ -30,7 +30,6 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState<string>('')
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
-  const [tokenUri, setTokenUri] = useState<string>('ipfs://metadata')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string>('')
 
@@ -127,51 +126,109 @@ export function StudentCheckin({ onCheckinSuccess }: StudentCheckinProps) {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-        <h3>学生出勤查询（教师记录模式）</h3>
-        <p>请先连接钱包并登录</p>
-        <button onClick={login}>登录</button>
+      <div className="checkin-container">
+        <div className="checkin-header">
+          <div className="header-icon">🔍</div>
+          <div className="header-content">
+            <h2>出勤查询</h2>
+            <p>请先连接钱包并登录以查询您的出勤记录</p>
+          </div>
+        </div>
+        <div className="auth-prompt">
+          <div className="auth-icon">🔐</div>
+          <div className="auth-content">
+            <h3>需要身份验证</h3>
+            <p>请先完成钱包连接和身份验证</p>
+            <button onClick={login} className="auth-button">
+              <span className="button-icon">🚀</span>
+              <span className="button-text">开始验证</span>
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-      <h3>学生出勤查询（教师记录模式）</h3>
-      <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-        <label>课次ID:</label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '200px' }}>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            style={{ padding: '4px' }}
-          >
-            <option value="">选择课程</option>
-            {courses.map(course => (
-              <option key={course.id} value={course.id}>
-                {course.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedSessionId}
-            onChange={(e) => setSelectedSessionId(e.target.value)}
-            style={{ padding: '4px' }}
-            disabled={!selectedCourseId}
-          >
-            <option value="">选择课次</option>
-            {sessions.map(session => (
-              <option key={session.id} value={session.id}>
-                {session.name}
-              </option>
-            ))}
-          </select>
+    <div className="checkin-container">
+      <div className="checkin-header">
+        <div className="header-icon">📱</div>
+        <div className="header-content">
+          <h2>出勤查询</h2>
+          <p>选择课程和课次，查询您的出勤记录</p>
         </div>
-        {/* 在教师记录模式下，不需要元数据URI输入 */}
-        <button onClick={submit} disabled={loading}>{loading ? '查询中...' : '查询出勤记录'}</button>
       </div>
-      {result && <div style={{ marginTop:12 }}>{result}</div>}
+
+      <div className="checkin-form">
+        <div className="selection-section">
+          <div className="form-group">
+            <label className="form-label">
+              <span className="label-icon">📚</span>
+              选择课程
+            </label>
+            <select
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+              className="form-select"
+            >
+              <option value="">请选择课程</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              <span className="label-icon">📅</span>
+              选择课次
+            </label>
+            <select
+              value={selectedSessionId}
+              onChange={(e) => setSelectedSessionId(e.target.value)}
+              className="form-select"
+              disabled={!selectedCourseId}
+            >
+              <option value="">
+                {selectedCourseId ? '请选择课次' : '请先选择课程'}
+              </option>
+              {sessions.map(session => (
+                <option key={session.id} value={session.id}>
+                  {session.name} (第{session.sessionNumber}次课)
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button
+            onClick={submit}
+            disabled={loading || !selectedSessionId}
+            className={`checkin-button ${loading ? 'loading' : ''}`}
+          >
+            <span className="button-icon">
+              {loading ? '⏳' : '🔍'}
+            </span>
+            <span className="button-text">
+              {loading ? '查询中...' : '查询出勤记录'}
+            </span>
+          </button>
+        </div>
+
+        {result && (
+          <div className={`result-message ${result.startsWith('✅') ? 'success' : 'error'}`}>
+            <div className="result-icon">
+              {result.startsWith('✅') ? '✅' : '❌'}
+            </div>
+            <div className="result-content">
+              <div className="result-text">{result}</div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

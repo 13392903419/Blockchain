@@ -21,12 +21,24 @@ connectDB().then(() => {
   process.exit(1);
 });
 
-// 区块链事件监听函数
-async function startBlockchainListener() {
-  try {
-    console.log('🔍 启动区块链事件监听...');
+// 全局 Provider 实例
+let globalProvider: any = null;
 
-    const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+function getProvider() {
+  if (!globalProvider) {
+    globalProvider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+  }
+  return globalProvider;
+}
+
+// 区块链事件监听函数
+async function startBlockchainListener(retryCount = 0) {
+  try {
+    console.log(`🔍 启动区块链事件监听... (尝试 ${retryCount + 1})`);
+
+    const provider = getProvider();
+    // 简单的连接测试
+    await provider.getNetwork();
     console.log('✅ 连接到区块链提供者');
 
     // 获取合约地址 (AttendanceNFT合约地址)
@@ -111,10 +123,18 @@ async function startBlockchainListener() {
 
   } catch (error: any) {
     console.error('❌ 启动区块链事件监听失败:', error.message);
-    console.error('请确保:');
-    console.error('1. Hardhat本地网络正在运行 (npx hardhat node)');
-    console.error('2. 合约已正确部署');
-    console.error('3. 合约地址配置正确');
+
+    if (retryCount < 5) {
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      console.log(`⏳ ${delay / 1000}秒后重试...`);
+      setTimeout(() => startBlockchainListener(retryCount + 1), delay);
+    } else {
+      console.error('❌ 重试次数过多，放弃监听。请检查区块链网络状态。');
+      console.error('请确保:');
+      console.error('1. Hardhat本地网络正在运行 (npx hardhat node)');
+      console.error('2. 合约已正确部署');
+      console.error('3. 合约地址配置正确');
+    }
   }
 }
 
@@ -128,7 +148,7 @@ app.use(express.json());
 // 限流
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100 // 限制每个IP 15分钟内最多100个请求
+  max: 1000 // 限制每个IP 15分钟内最多1000个请求 (Increased for dev)
 });
 app.use(limiter);
 
@@ -145,7 +165,7 @@ app.get("/auth/challenge", (_req: any, res: any) => {
 app.post("/auth/login", async (req: any, res: any) => {
   try {
     const { address, signature, message } = req.body;
-    
+
     if (!address || !signature || !message) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -166,7 +186,7 @@ app.post("/auth/login", async (req: any, res: any) => {
     }
 
     // 连接到RoleManager合约
-    const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+    const provider = getProvider();
     console.log('🔍 连接到区块链提供者');
 
     const roleManagerContract = new ethers.Contract(
@@ -211,10 +231,10 @@ app.post("/auth/login", async (req: any, res: any) => {
     // 生成JWT token
     const token = generateToken({ address, role, nonce: message });
 
-    res.json({ 
-      token, 
+    res.json({
+      token,
       user: { address, role },
-      message: "Login successful" 
+      message: "Login successful"
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -249,7 +269,7 @@ app.post("/api/courses", authenticateToken, requireTeacher, async (req: any, res
 // 获取课程列表
 app.get("/api/courses", authenticateToken, async (req: any, res: any) => {
   try {
-    const courses = req.user!.role === 'teacher' 
+    const courses = req.user!.role === 'teacher'
       ? await db.getCoursesByTeacher(req.user!.address)
       : await db.getAllCourses();
     res.json(courses);
@@ -377,7 +397,7 @@ const attendanceAbi = [
       { internalType: "string", name: "tokenUri", type: "string" }
     ],
     name: "mintAttendance",
-    outputs: [ { internalType: "uint256", name: "tokenId", type: "uint256" } ],
+    outputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }],
     stateMutability: "nonpayable",
     type: "function"
   }
@@ -447,7 +467,7 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
 app.get("/api/attendance/records", authenticateToken, async (req: any, res: any) => {
   try {
     const { sessionId, studentAddress } = req.query;
-    
+
     let records: any[];
     if (sessionId) {
       records = await db.getAttendanceBySession(sessionId as string);
@@ -471,7 +491,7 @@ app.get("/api/attendance/records", authenticateToken, async (req: any, res: any)
 });
 
 // 获取出勤统计
-app.get("/api/attendance/stats/:sessionId", authenticateToken, async (req: any, res: any ) => {
+app.get("/api/attendance/stats/:sessionId", authenticateToken, async (req: any, res: any) => {
   try {
     const stats = await db.getSessionStats(req.params.sessionId!);
     res.json(stats);
@@ -481,7 +501,7 @@ app.get("/api/attendance/stats/:sessionId", authenticateToken, async (req: any, 
 });
 
 // 获取课程出勤统计
-app.get("/api/courses/:courseId/stats", authenticateToken, async (req: any, res: any ) => {
+app.get("/api/courses/:courseId/stats", authenticateToken, async (req: any, res: any) => {
   try {
     const stats = await db.getCourseStats(req.params.courseId!);
     res.json(stats);
@@ -499,7 +519,7 @@ app.get('/api/reports/course-stats', authenticateToken, async (req: any, res: an
     for (const course of courses) {
       const sessions = await db.getSessionsByCourse(course.id);
       const courseStat = await db.getCourseStats(course.id);
-      
+
       const attendanceRecords = [];
       for (const session of sessions) {
         const sessionStats = await db.getSessionStats(session.id);
@@ -546,7 +566,7 @@ app.get('/api/reports/student-stats', authenticateToken, async (req: any, res: a
 
       const studentStat = studentMap.get(record.studentAddress);
       studentStat.totalSessions++;
-      
+
       if (record.status === 'present') {
         studentStat.attendedSessions++;
       }
@@ -580,10 +600,10 @@ app.get('/api/reports/time-stats', authenticateToken, async (req: any, res: any)
   try {
     const allRecords = await db.getAllAttendanceRecords();
     const allSessions = await db.getAllSessions();
-    
+
     // 按日期分组
     const dateMap = new Map();
-    
+
     for (const session of allSessions) {
       const date = new Date(session.startTime).toISOString().split('T')[0];
       if (!dateMap.has(date)) {
@@ -594,10 +614,10 @@ app.get('/api/reports/time-stats', authenticateToken, async (req: any, res: any)
           totalPossible: 0
         });
       }
-      
+
       const dayStat = dateMap.get(date);
       dayStat.sessions++;
-      
+
       const sessionRecords = allRecords.filter((r: any) => r.sessionId === session.id);
       dayStat.attendance += sessionRecords.filter((r: any) => r.status === 'present').length;
       dayStat.totalPossible += sessionRecords.length;
@@ -625,6 +645,173 @@ app.get('/api/reports/time-stats', authenticateToken, async (req: any, res: any)
     console.error('Time stats error:', error);
     res.status(500).json({ error: 'Failed to get time statistics' });
   }
+});
+
+// ===== Advanced Features APIs =====
+
+// 1. Certificates (SBT)
+app.post("/api/certificates", authenticateToken, requireTeacher, async (req: any, res: any) => {
+  try {
+    console.log('收到证书创建请求，用户信息:', req.user);
+    console.log('请求体:', req.body);
+
+    const { studentAddress, name, description, tokenId, txHash } = req.body;
+
+    // 验证必需字段
+    if (!studentAddress || !name) {
+      console.log('缺少必需字段:', { studentAddress, name });
+      return res.status(400).json({ error: '缺少必需字段: studentAddress 和 name' });
+    }
+
+    console.log('开始创建证书...');
+    const cert = await db.createCertificate({
+      studentAddress,
+      name,
+      description,
+      tokenId,
+      txHash
+    });
+
+    console.log('证书创建成功:', cert);
+    res.json(cert);
+  } catch (error: any) {
+    console.error('证书创建失败:', error);
+    res.status(500).json({ error: `证书创建失败: ${error.message}` });
+  }
+});
+
+app.get("/api/certificates", authenticateToken, async (req: any, res: any) => {
+  try {
+    const studentAddress = req.query.studentAddress || req.user!.address;
+    const certs = await db.getCertificatesByStudent(studentAddress as string);
+    res.json(certs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Student Work (IP)
+app.post("/api/student-work", authenticateToken, requireStudent, async (req: any, res: any) => {
+  try {
+    const { title, description, fileUrl, tokenId, txHash } = req.body;
+    const work = await db.createStudentWork({
+      studentAddress: req.user!.address,
+      title,
+      description,
+      fileUrl,
+      tokenId,
+      txHash
+    });
+    res.json(work);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/student-work", authenticateToken, async (req: any, res: any) => {
+  try {
+    const studentAddress = req.query.studentAddress as string;
+    const works = await db.getStudentWorks(studentAddress);
+    res.json(works);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/student-work/:id/endorse", authenticateToken, requireTeacher, async (req: any, res: any) => {
+  try {
+    const work = await db.endorseStudentWork(req.params.id!);
+    res.json(work);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Access Pass
+app.post("/api/access-pass", authenticateToken, requireTeacher, async (req: any, res: any) => {
+  try {
+    const { studentAddress, passType, amount, tokenId, txHash } = req.body;
+    const pass = await db.createAccessPass({
+      studentAddress,
+      passType,
+      amount,
+      tokenId,
+      txHash
+    });
+    res.json(pass);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/access-pass", authenticateToken, async (req: any, res: any) => {
+  try {
+    const studentAddress = req.query.studentAddress || req.user!.address;
+    const passes = await db.getAccessPasses(studentAddress as string);
+    res.json(passes);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/access-pass/:id/redeem", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    console.log('收到通行证兑换请求，通行证ID:', id, '用户:', req.user?.address);
+
+    // 首先获取通行证信息，确认所有权
+    const passes = await db.getAccessPasses(req.user!.address);
+    const pass = passes.find(p => p._id === id);
+
+    if (!pass) {
+      return res.status(404).json({ error: '通行证不存在或不属于当前用户' });
+    }
+
+    if (pass.isRedeemed) {
+      return res.status(400).json({ error: '通行证已被兑换' });
+    }
+
+    // 兑换通行证
+    const updatedPass = await db.redeemAccessPass(id);
+    console.log('通行证兑换成功:', updatedPass);
+
+    res.json(updatedPass);
+  } catch (error: any) {
+    console.error('通行证兑换失败:', error);
+    res.status(500).json({ error: `通行证兑换失败: ${error.message}` });
+  }
+});
+
+// 4. Student Pet (Dynamic NFT)
+app.get("/api/student-pet", authenticateToken, async (req: any, res: any) => {
+  try {
+    const studentAddress = req.query.studentAddress || req.user!.address;
+    const pet = await db.getStudentPet(studentAddress as string);
+    res.json(pet || { stage: 0, experience: 0 }); // Default if no pet
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/student-pet/update", authenticateToken, requireTeacher, async (req: any, res: any) => {
+  try {
+    const { studentAddress, stage, experience, tokenId } = req.body;
+    const pet = await db.createOrUpdateStudentPet(studentAddress, {
+      stage,
+      experience,
+      tokenId
+    });
+    res.json(pet);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. POAP Synthesis (Placeholder for logic)
+app.post("/api/poap/synthesize", authenticateToken, requireStudent, async (req: any, res: any) => {
+  // In a real implementation, this might check eligibility or record the synthesis event
+  // For now, we assume the synthesis happens on-chain and we just record it if needed
+  res.json({ message: "Synthesis logic to be implemented" });
 });
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;

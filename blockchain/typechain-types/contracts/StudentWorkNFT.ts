@@ -23,16 +23,16 @@ import type {
   TypedContractMethod,
 } from "../common";
 
-export interface AttendanceNFTInterface extends Interface {
+export interface StudentWorkNFTInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "approve"
       | "balanceOf"
-      | "batchMintAttendance"
+      | "endorseWork"
       | "getApproved"
-      | "hasAttended"
       | "isApprovedForAll"
-      | "mintAttendance"
+      | "isEndorsed"
+      | "mintWork"
       | "name"
       | "owner"
       | "ownerOf"
@@ -51,11 +51,12 @@ export interface AttendanceNFTInterface extends Interface {
     nameOrSignatureOrTopic:
       | "Approval"
       | "ApprovalForAll"
-      | "AttendanceRecorded"
       | "BatchMetadataUpdate"
       | "MetadataUpdate"
       | "OwnershipTransferred"
       | "Transfer"
+      | "WorkEndorsed"
+      | "WorkMinted"
   ): EventFragment;
 
   encodeFunctionData(
@@ -67,25 +68,22 @@ export interface AttendanceNFTInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "batchMintAttendance",
-    values: [BigNumberish, AddressLike[], string]
+    functionFragment: "endorseWork",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getApproved",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "hasAttended",
-    values: [BigNumberish, AddressLike]
-  ): string;
-  encodeFunctionData(
     functionFragment: "isApprovedForAll",
     values: [AddressLike, AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "mintAttendance",
-    values: [BigNumberish, AddressLike, string]
+    functionFragment: "isEndorsed",
+    values: [BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "mintWork", values: [string]): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
@@ -129,7 +127,7 @@ export interface AttendanceNFTInterface extends Interface {
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "batchMintAttendance",
+    functionFragment: "endorseWork",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -137,17 +135,11 @@ export interface AttendanceNFTInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "hasAttended",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "isApprovedForAll",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "mintAttendance",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "isEndorsed", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "mintWork", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ownerOf", data: BytesLike): Result;
@@ -223,28 +215,6 @@ export namespace ApprovalForAllEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace AttendanceRecordedEvent {
-  export type InputTuple = [
-    sessionId: BigNumberish,
-    student: AddressLike,
-    tokenId: BigNumberish
-  ];
-  export type OutputTuple = [
-    sessionId: bigint,
-    student: string,
-    tokenId: bigint
-  ];
-  export interface OutputObject {
-    sessionId: bigint;
-    student: string;
-    tokenId: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
 export namespace BatchMetadataUpdateEvent {
   export type InputTuple = [
     _fromTokenId: BigNumberish,
@@ -304,11 +274,46 @@ export namespace TransferEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export interface AttendanceNFT extends BaseContract {
-  connect(runner?: ContractRunner | null): AttendanceNFT;
+export namespace WorkEndorsedEvent {
+  export type InputTuple = [tokenId: BigNumberish, teacher: AddressLike];
+  export type OutputTuple = [tokenId: bigint, teacher: string];
+  export interface OutputObject {
+    tokenId: bigint;
+    teacher: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace WorkMintedEvent {
+  export type InputTuple = [
+    student: AddressLike,
+    tokenId: BigNumberish,
+    tokenURI: string
+  ];
+  export type OutputTuple = [
+    student: string,
+    tokenId: bigint,
+    tokenURI: string
+  ];
+  export interface OutputObject {
+    student: string;
+    tokenId: bigint;
+    tokenURI: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export interface StudentWorkNFT extends BaseContract {
+  connect(runner?: ContractRunner | null): StudentWorkNFT;
   waitForDeployment(): Promise<this>;
 
-  interface: AttendanceNFTInterface;
+  interface: StudentWorkNFTInterface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -355,19 +360,13 @@ export interface AttendanceNFT extends BaseContract {
 
   balanceOf: TypedContractMethod<[owner: AddressLike], [bigint], "view">;
 
-  batchMintAttendance: TypedContractMethod<
-    [sessionId: BigNumberish, students: AddressLike[], baseTokenUri: string],
+  endorseWork: TypedContractMethod<
+    [tokenId: BigNumberish],
     [void],
     "nonpayable"
   >;
 
   getApproved: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
-
-  hasAttended: TypedContractMethod<
-    [arg0: BigNumberish, arg1: AddressLike],
-    [boolean],
-    "view"
-  >;
 
   isApprovedForAll: TypedContractMethod<
     [owner: AddressLike, operator: AddressLike],
@@ -375,11 +374,9 @@ export interface AttendanceNFT extends BaseContract {
     "view"
   >;
 
-  mintAttendance: TypedContractMethod<
-    [sessionId: BigNumberish, student: AddressLike, tokenUri: string],
-    [bigint],
-    "nonpayable"
-  >;
+  isEndorsed: TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
+
+  mintWork: TypedContractMethod<[_tokenURI: string], [bigint], "nonpayable">;
 
   name: TypedContractMethod<[], [string], "view">;
 
@@ -449,22 +446,11 @@ export interface AttendanceNFT extends BaseContract {
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[owner: AddressLike], [bigint], "view">;
   getFunction(
-    nameOrSignature: "batchMintAttendance"
-  ): TypedContractMethod<
-    [sessionId: BigNumberish, students: AddressLike[], baseTokenUri: string],
-    [void],
-    "nonpayable"
-  >;
+    nameOrSignature: "endorseWork"
+  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "getApproved"
   ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
-  getFunction(
-    nameOrSignature: "hasAttended"
-  ): TypedContractMethod<
-    [arg0: BigNumberish, arg1: AddressLike],
-    [boolean],
-    "view"
-  >;
   getFunction(
     nameOrSignature: "isApprovedForAll"
   ): TypedContractMethod<
@@ -473,12 +459,11 @@ export interface AttendanceNFT extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "mintAttendance"
-  ): TypedContractMethod<
-    [sessionId: BigNumberish, student: AddressLike, tokenUri: string],
-    [bigint],
-    "nonpayable"
-  >;
+    nameOrSignature: "isEndorsed"
+  ): TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "mintWork"
+  ): TypedContractMethod<[_tokenURI: string], [bigint], "nonpayable">;
   getFunction(
     nameOrSignature: "name"
   ): TypedContractMethod<[], [string], "view">;
@@ -552,13 +537,6 @@ export interface AttendanceNFT extends BaseContract {
     ApprovalForAllEvent.OutputObject
   >;
   getEvent(
-    key: "AttendanceRecorded"
-  ): TypedContractEvent<
-    AttendanceRecordedEvent.InputTuple,
-    AttendanceRecordedEvent.OutputTuple,
-    AttendanceRecordedEvent.OutputObject
-  >;
-  getEvent(
     key: "BatchMetadataUpdate"
   ): TypedContractEvent<
     BatchMetadataUpdateEvent.InputTuple,
@@ -586,6 +564,20 @@ export interface AttendanceNFT extends BaseContract {
     TransferEvent.OutputTuple,
     TransferEvent.OutputObject
   >;
+  getEvent(
+    key: "WorkEndorsed"
+  ): TypedContractEvent<
+    WorkEndorsedEvent.InputTuple,
+    WorkEndorsedEvent.OutputTuple,
+    WorkEndorsedEvent.OutputObject
+  >;
+  getEvent(
+    key: "WorkMinted"
+  ): TypedContractEvent<
+    WorkMintedEvent.InputTuple,
+    WorkMintedEvent.OutputTuple,
+    WorkMintedEvent.OutputObject
+  >;
 
   filters: {
     "Approval(address,address,uint256)": TypedContractEvent<
@@ -608,17 +600,6 @@ export interface AttendanceNFT extends BaseContract {
       ApprovalForAllEvent.InputTuple,
       ApprovalForAllEvent.OutputTuple,
       ApprovalForAllEvent.OutputObject
-    >;
-
-    "AttendanceRecorded(uint256,address,uint256)": TypedContractEvent<
-      AttendanceRecordedEvent.InputTuple,
-      AttendanceRecordedEvent.OutputTuple,
-      AttendanceRecordedEvent.OutputObject
-    >;
-    AttendanceRecorded: TypedContractEvent<
-      AttendanceRecordedEvent.InputTuple,
-      AttendanceRecordedEvent.OutputTuple,
-      AttendanceRecordedEvent.OutputObject
     >;
 
     "BatchMetadataUpdate(uint256,uint256)": TypedContractEvent<
@@ -663,6 +644,28 @@ export interface AttendanceNFT extends BaseContract {
       TransferEvent.InputTuple,
       TransferEvent.OutputTuple,
       TransferEvent.OutputObject
+    >;
+
+    "WorkEndorsed(uint256,address)": TypedContractEvent<
+      WorkEndorsedEvent.InputTuple,
+      WorkEndorsedEvent.OutputTuple,
+      WorkEndorsedEvent.OutputObject
+    >;
+    WorkEndorsed: TypedContractEvent<
+      WorkEndorsedEvent.InputTuple,
+      WorkEndorsedEvent.OutputTuple,
+      WorkEndorsedEvent.OutputObject
+    >;
+
+    "WorkMinted(address,uint256,string)": TypedContractEvent<
+      WorkMintedEvent.InputTuple,
+      WorkMintedEvent.OutputTuple,
+      WorkMintedEvent.OutputObject
+    >;
+    WorkMinted: TypedContractEvent<
+      WorkMintedEvent.InputTuple,
+      WorkMintedEvent.OutputTuple,
+      WorkMintedEvent.OutputObject
     >;
   };
 }

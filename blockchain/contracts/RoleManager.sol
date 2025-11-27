@@ -17,6 +17,11 @@ contract RoleManager is Ownable, ReentrancyGuard {
     // 地址到角色的映射
     mapping(address => Role) private _roles;
 
+    // 教师地址列表 - 用于遍历
+    address[] private _teacherList;
+    // 教师地址在列表中的索引 + 1 (0表示不在列表中)
+    mapping(address => uint256) private _teacherListIndex;
+
     // 角色变更事件
     event RoleGranted(address indexed account, Role role);
     event RoleRevoked(address indexed account, Role role);
@@ -26,8 +31,48 @@ contract RoleManager is Ownable, ReentrancyGuard {
      */
     constructor() Ownable(msg.sender) {
         // 合约部署者默认为教师
-        _roles[msg.sender] = Role.Teacher;
-        emit RoleGranted(msg.sender, Role.Teacher);
+        _grantTeacher(msg.sender);
+    }
+
+    /**
+     * @dev 内部函数：授予教师角色
+     */
+    function _grantTeacher(address account) internal {
+        if (_roles[account] != Role.Teacher) {
+            _roles[account] = Role.Teacher;
+            
+            // 添加到教师列表
+            if (_teacherListIndex[account] == 0) {
+                _teacherList.push(account);
+                _teacherListIndex[account] = _teacherList.length;
+            }
+            
+            emit RoleGranted(account, Role.Teacher);
+        }
+    }
+
+    /**
+     * @dev 内部函数：撤销教师角色
+     */
+    function _revokeTeacher(address account) internal {
+        if (_roles[account] == Role.Teacher) {
+            _roles[account] = Role.None;
+            
+            // 从教师列表中移除 (Swap and Pop)
+            uint256 index = _teacherListIndex[account];
+            if (index > 0) {
+                uint256 lastIndex = _teacherList.length;
+                if (index != lastIndex) {
+                    address lastTeacher = _teacherList[lastIndex - 1];
+                    _teacherList[index - 1] = lastTeacher;
+                    _teacherListIndex[lastTeacher] = index;
+                }
+                _teacherList.pop();
+                delete _teacherListIndex[account];
+            }
+            
+            emit RoleRevoked(account, Role.Teacher);
+        }
     }
 
     /**
@@ -38,9 +83,7 @@ contract RoleManager is Ownable, ReentrancyGuard {
     function grantTeacherRole(address account) external onlyOwner nonReentrant {
         require(account != address(0), "Cannot grant role to zero address");
         require(_roles[account] != Role.Teacher, "Account already has teacher role");
-
-        _roles[account] = Role.Teacher;
-        emit RoleGranted(account, Role.Teacher);
+        _grantTeacher(account);
     }
 
     /**
@@ -50,9 +93,7 @@ contract RoleManager is Ownable, ReentrancyGuard {
      */
     function revokeTeacherRole(address account) external onlyOwner nonReentrant {
         require(_roles[account] == Role.Teacher, "Account does not have teacher role");
-
-        _roles[account] = Role.None;
-        emit RoleRevoked(account, Role.Teacher);
+        _revokeTeacher(account);
     }
 
     /**
@@ -64,8 +105,7 @@ contract RoleManager is Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < accounts.length; i++) {
             address account = accounts[i];
             if (account != address(0) && _roles[account] != Role.Teacher) {
-                _roles[account] = Role.Teacher;
-                emit RoleGranted(account, Role.Teacher);
+                _grantTeacher(account);
             }
         }
     }
@@ -94,8 +134,8 @@ contract RoleManager is Ownable, ReentrancyGuard {
      * @return 是否为学生
      */
     function isStudent(address account) external view returns (bool) {
-        Role role = _roles[account];
-        return role == Role.Student || role == Role.None; // 未明确设置为教师的都是学生
+        // 只要不是教师，就是学生 (默认角色)
+        return _roles[account] != Role.Teacher;
     }
 
     /**
@@ -103,14 +143,7 @@ contract RoleManager is Ownable, ReentrancyGuard {
      * @return 教师地址数组
      */
     function getAllTeachers() external view returns (address[] memory) {
-        // 这是一个简化的实现，实际项目中可能需要分页
-        address[] memory teachers = new address[](100); // 预估大小
-        uint256 count = 0;
-
-        // 这里需要一个更好的实现方式
-        // 在生产环境中，可能需要维护一个教师列表数组
-
-        return teachers;
+        return _teacherList;
     }
 
     /**
@@ -120,7 +153,6 @@ contract RoleManager is Ownable, ReentrancyGuard {
         address ownerAddress,
         uint256 teacherCount
     ) {
-        address contractOwner = owner();
-        return (contractOwner, 0); // teacherCount需要单独实现
+        return (owner(), _teacherList.length);
     }
 }

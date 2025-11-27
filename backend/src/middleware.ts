@@ -13,27 +13,33 @@ declare global {
 // 认证中间件
 export function authenticateToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
-  console.log('认证中间件 - 收到请求:', req.path);
-  console.log('认证头:', authHeader);
+  console.log('🔐 认证中间件 - 收到请求:', req.path, req.method);
+  console.log('🔐 认证头存在:', !!authHeader);
+
+  if (authHeader) {
+    console.log('🔐 认证头格式:', authHeader.substring(0, 20) + '...');
+  }
 
   const token = authHeader && authHeader.split(' ')[1];
-  console.log('解析出的token:', token ? token.substring(0, 20) + '...' : 'null');
+  console.log('🔐 解析出的token存在:', !!token);
 
   if (!token) {
-    console.log('没有token，返回401');
+    console.log('❌ 没有token，返回401');
     return res.status(401).json({ error: 'Access token required' });
   }
 
   const user = verifyToken(token);
-  console.log('token验证结果:', user ? '成功' : '失败');
+  console.log('🔐 token验证结果:', user ? '成功' : '失败');
 
-  if (!user) {
-    console.log('token无效，返回403');
+  if (user) {
+    console.log('🔐 用户信息:', { address: user.address, role: user.role });
+  } else {
+    console.log('❌ token无效，返回403');
     return res.status(403).json({ error: 'Invalid token' });
   }
 
   req.user = user;
-  console.log('认证成功，用户:', user.address, user.role);
+  console.log('✅ 认证成功，继续处理请求');
   next();
 }
 

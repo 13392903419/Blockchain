@@ -209,104 +209,150 @@ export function TeacherBatchMint() {
   }
 
   return (
-    <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 20 }}>
-      <h3>教师端 - 铸造出勤NFT</h3>
-
-      {/* 课程选择 */}
-      <div style={{ marginBottom: 16 }}>
-        <label>选择课程: </label>
-        <select
-          value={selectedCourseId}
-          onChange={(e) => setSelectedCourseId(e.target.value)}
-          style={{ width: 200, marginLeft: 8, padding: '4px 8px' }}
-        >
-          <option value="">请选择课程</option>
-          {courses.map(course => (
-            <option key={course.id} value={course.id}>
-              {course.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 课次选择 */}
-      <div style={{ marginBottom: 16 }}>
-        <label>选择课次: </label>
-        <select
-          value={selectedSessionId}
-          onChange={(e) => setSelectedSessionId(e.target.value)}
-          style={{ width: 200, marginLeft: 8, padding: '4px 8px' }}
-          disabled={!selectedCourseId}
-        >
-          <option value="">请选择课次</option>
-          {sessions.map(session => (
-            <option key={session.id} value={session.id}>
-              {session.name} (#{session.sessionNumber})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 学生地址输入 */}
-      <div style={{ marginBottom: 16 }}>
-        <label>学生地址: </label>
-        <input
-          value={studentAddress}
-          onChange={(e) => setStudentAddress(e.target.value)}
-          style={{ width: 400, marginLeft: 8, padding: '4px 8px' }}
-          placeholder="0x..."
-        />
-      </div>
-
-      {/* Token URI输入 */}
-      <div style={{ marginBottom: 16 }}>
-        <label>NFT元数据URI: </label>
-        <input
-          value={tokenUri}
-          onChange={(e) => setTokenUri(e.target.value)}
-          style={{ width: 300, marginLeft: 8, padding: '4px 8px' }}
-          placeholder="ipfs://metadata"
-        />
-      </div>
-
-      {/* 铸造按钮 */}
-      <div style={{ marginBottom: 16 }}>
-        <button
-          onClick={handleMint}
-          disabled={isMinting}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: isMinting ? '#ccc' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            cursor: isMinting ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {isMinting ? '铸造中...' : '铸造NFT'}
-        </button>
-      </div>
-
-      {/* 结果显示 */}
-      {mintResult && (
-        <div style={{
-          marginTop: 16,
-          padding: 10,
-          borderRadius: 4,
-          backgroundColor: mintResult.startsWith('✅') ? '#d4edda' : '#f8d7da',
-          color: mintResult.startsWith('✅') ? '#155724' : '#721c24',
-          whiteSpace: 'pre-wrap'
-        }}>
-          {mintResult}
+    <div className="mint-container">
+      <div className="mint-header">
+        <div className="header-icon">🎓</div>
+        <div className="header-content">
+          <h2>教师出勤记录</h2>
+          <p>为学生铸造出勤NFT，记录区块链上的学习轨迹</p>
         </div>
-      )}
+      </div>
 
-      {/* 调试信息 */}
-      <div style={{ marginTop: 20, fontSize: 12, color: '#666' }}>
-        <div>合约地址: {contractAddress}</div>
-        <div>当前地址: {address}</div>
-        <div>选择课程: {selectedCourseId || '未选择'}</div>
-        <div>选择课次: {selectedSessionId || '未选择'}</div>
+      <div className="mint-form">
+        {/* 课程选择 */}
+        <div className="form-group">
+          <label className="form-label">
+            <span className="label-icon">📚</span>
+            选择课程
+          </label>
+          <select
+            value={selectedCourseId}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
+            className="form-select"
+          >
+            <option value="">请选择课程</option>
+            {courses.map(course => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 课次选择 */}
+        <div className="form-group">
+          <label className="form-label">
+            <span className="label-icon">📅</span>
+            选择课次
+          </label>
+          <select
+            value={selectedSessionId}
+            onChange={(e) => setSelectedSessionId(e.target.value)}
+            className="form-select"
+            disabled={!selectedCourseId}
+          >
+            <option value="">
+              {selectedCourseId ? '请选择课次' : '请先选择课程'}
+            </option>
+            {sessions.map(session => (
+              <option key={session.id} value={session.id}>
+                {session.name} (第{session.sessionNumber}次课)
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 学生地址输入 */}
+        <div className="form-group">
+          <label className="form-label">
+            <span className="label-icon">👨‍🎓</span>
+            学生钱包地址
+          </label>
+          <input
+            type="text"
+            value={studentAddress}
+            onChange={(e) => setStudentAddress(e.target.value)}
+            className="form-input"
+            placeholder="0x..."
+            pattern="^0x[a-fA-F0-9]{40}$"
+            title="请输入有效的以太坊地址"
+          />
+          <div className="input-hint">
+            输入学生的以太坊钱包地址，用于铸造NFT
+          </div>
+        </div>
+
+        {/* Token URI输入 */}
+        <div className="form-group">
+          <label className="form-label">
+            <span className="label-icon">🎨</span>
+            NFT元数据URI
+          </label>
+          <input
+            type="url"
+            value={tokenUri}
+            onChange={(e) => setTokenUri(e.target.value)}
+            className="form-input"
+            placeholder="ipfs://..."
+          />
+          <div className="input-hint">
+            NFT的元数据链接，包含出勤证明信息
+          </div>
+        </div>
+
+        {/* 铸造按钮 */}
+        <div className="form-actions">
+          <button
+            onClick={handleMint}
+            disabled={isMinting || !selectedSessionId || !studentAddress.trim()}
+            className={`mint-button ${isMinting ? 'loading' : ''}`}
+          >
+            <span className="button-icon">
+              {isMinting ? '⏳' : '⚡'}
+            </span>
+            <span className="button-text">
+              {isMinting ? '正在铸造...' : '铸造出勤NFT'}
+            </span>
+          </button>
+        </div>
+
+        {/* 结果显示 */}
+        {mintResult && (
+          <div className={`result-message ${mintResult.startsWith('✅') ? 'success' : 'error'}`}>
+            <div className="result-icon">
+              {mintResult.startsWith('✅') ? '✅' : '❌'}
+            </div>
+            <div className="result-content">
+              <pre className="result-text">{mintResult}</pre>
+            </div>
+          </div>
+        )}
+
+        {/* 调试信息 */}
+        <div className="debug-info">
+          <div className="debug-header">
+            <span className="debug-icon">🔍</span>
+            <span className="debug-title">调试信息</span>
+          </div>
+          <div className="debug-grid">
+            <div className="debug-item">
+              <span className="debug-label">合约地址:</span>
+              <code className="debug-value">{contractAddress.slice(0, 10)}...</code>
+            </div>
+            <div className="debug-item">
+              <span className="debug-label">教师地址:</span>
+              <code className="debug-value">{address?.slice(0, 10)}...</code>
+            </div>
+            <div className="debug-item">
+              <span className="debug-label">选中课程:</span>
+              <span className="debug-value">{selectedCourseId || '未选择'}</span>
+            </div>
+            <div className="debug-item">
+              <span className="debug-label">选中课次:</span>
+              <span className="debug-value">{selectedSessionId || '未选择'}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

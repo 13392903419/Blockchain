@@ -62,6 +62,54 @@ const SessionModel = mongoose.model('Session', sessionSchema);
 const AttendanceRecordModel = mongoose.model('AttendanceRecord', attendanceRecordSchema);
 const UserModel = mongoose.model('User', userSchema);
 
+// Advanced Features Schemas
+const certificateSchema = new mongoose.Schema({
+  _id: { type: String },
+  studentAddress: { type: String, required: true },
+  name: { type: String, required: true },
+  description: { type: String },
+  tokenId: { type: String },
+  txHash: { type: String },
+  issuedAt: { type: Date, default: Date.now }
+});
+
+const studentWorkSchema = new mongoose.Schema({
+  _id: { type: String },
+  studentAddress: { type: String, required: true },
+  title: { type: String, required: true },
+  description: { type: String },
+  fileUrl: { type: String, required: true }, // IPFS or local URL
+  tokenId: { type: String },
+  txHash: { type: String },
+  isEndorsed: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const accessPassSchema = new mongoose.Schema({
+  _id: { type: String },
+  studentAddress: { type: String, required: true },
+  passType: { type: Number, required: true }, // 1=OfficeHour, 2=Lab, etc.
+  amount: { type: Number, default: 1 },
+  tokenId: { type: Number, required: true }, // ERC1155 Token ID - 现在是数字类型
+  txHash: { type: String },
+  isRedeemed: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const studentPetSchema = new mongoose.Schema({
+  _id: { type: String },
+  studentAddress: { type: String, required: true, unique: true },
+  tokenId: { type: String },
+  stage: { type: Number, default: 0 }, // 0=Seed, 1=Sprout, etc.
+  experience: { type: Number, default: 0 },
+  lastUpdated: { type: Date, default: Date.now }
+});
+
+const CertificateModel = mongoose.model('Certificate', certificateSchema);
+const StudentWorkModel = mongoose.model('StudentWork', studentWorkSchema);
+const AccessPassModel = mongoose.model('AccessPass', accessPassSchema);
+const StudentPetModel = mongoose.model('StudentPet', studentPetSchema);
+
 // 数据库连接
 let isConnected = false;
 
@@ -454,43 +502,90 @@ class Database {
 
   // Statistics - MongoDB版本
   async getSessionStats(sessionId: string): Promise<AttendanceStats> {
-    const records = await this.getAttendanceBySession(sessionId);
-    const totalStudents = records.length;
-    const presentCount = records.filter(r => r.status === 'present').length;
-    const absentCount = records.filter(r => r.status === 'absent').length;
-    const lateCount = records.filter(r => r.status === 'late').length;
-    const attendanceRate = totalStudents > 0 ? (presentCount / totalStudents) * 100 : 0;
+    await this.connect();
+
+    const stats = await AttendanceRecordModel.aggregate([
+      { $match: { sessionId: sessionId } },
+      {
+        $group: {
+          _id: null,
+          totalStudents: { $sum: 1 },
+          presentCount: {
+            $sum: { $cond: [{ $eq: ["$status", "present"] }, 1, 0] }
+          },
+          absentCount: {
+            $sum: { $cond: [{ $eq: ["$status", "absent"] }, 1, 0] }
+          },
+          lateCount: {
+            $sum: { $cond: [{ $eq: ["$status", "late"] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalStudents: 0,
+      presentCount: 0,
+      absentCount: 0,
+      lateCount: 0
+    };
+
+    const attendanceRate = result.totalStudents > 0
+      ? (result.presentCount / result.totalStudents) * 100
+      : 0;
 
     return {
       sessionId,
-      totalStudents,
-      presentCount,
-      absentCount,
-      lateCount,
+      totalStudents: result.totalStudents,
+      presentCount: result.presentCount,
+      absentCount: result.absentCount,
+      lateCount: result.lateCount,
       attendanceRate
     };
   }
 
   async getCourseStats(courseId: string): Promise<CourseStats> {
+    await this.connect();
     const sessions = await this.getSessionsByCourse(courseId);
-    const totalSessions = sessions.length;
-    let totalAttendance = 0;
-    let totalPossibleAttendance = 0;
+    const sessionIds = sessions.map(s => s.id);
 
-    for (const session of sessions) {
-      const stats = await this.getSessionStats(session.id);
-      totalAttendance += stats.presentCount;
-      totalPossibleAttendance += stats.totalStudents;
+    if (sessionIds.length === 0) {
+      return {
+        courseId,
+        totalSessions: 0,
+        totalAttendance: 0,
+        averageAttendanceRate: 0
+      };
     }
 
-    const averageAttendanceRate = totalPossibleAttendance > 0
-      ? (totalAttendance / totalPossibleAttendance) * 100
+    const stats = await AttendanceRecordModel.aggregate([
+      { $match: { sessionId: { $in: sessionIds } } },
+      {
+        $group: {
+          _id: null,
+          totalAttendance: {
+            $sum: { $cond: [{ $eq: ["$status", "present"] }, 1, 0] }
+          },
+          totalRecords: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const result = stats[0] || { totalAttendance: 0, totalRecords: 0 };
+
+    // Calculate average attendance rate based on total possible attendance (sum of all session students)
+    // Note: This assumes totalRecords represents the total possible attendance slots filled.
+    // If we want "average of session rates", we'd need a different aggregation.
+    // But "Total Attendance / Total Possible" is usually a better metric for the course.
+
+    const averageAttendanceRate = result.totalRecords > 0
+      ? (result.totalAttendance / result.totalRecords) * 100
       : 0;
 
     return {
       courseId,
-      totalSessions,
-      totalAttendance,
+      totalSessions: sessions.length,
+      totalAttendance: result.totalAttendance,
       averageAttendanceRate
     };
   }
@@ -567,6 +662,75 @@ class Database {
     const isValid = issues.length === 0;
 
     return { isValid, issues };
+  }
+
+  // Advanced Features CRUD
+
+  // Certificates
+  async createCertificate(data: any) {
+    await this.connect();
+    const id = `cert_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return await CertificateModel.create({ _id: id, ...data });
+  }
+
+  async getCertificatesByStudent(studentAddress: string) {
+    await this.connect();
+    // 使用不区分大小写的正则表达式查询，以兼容大小写不同的地址格式
+    return await CertificateModel.find({
+      studentAddress: new RegExp(`^${studentAddress}$`, 'i')
+    });
+  }
+
+  // Student Work
+  async createStudentWork(data: any) {
+    await this.connect();
+    const id = `work_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return await StudentWorkModel.create({ _id: id, ...data });
+  }
+
+  async getStudentWorks(studentAddress?: string) {
+    await this.connect();
+    const query = studentAddress ? { studentAddress: new RegExp(`^${studentAddress}$`, 'i') } : {};
+    return await StudentWorkModel.find(query);
+  }
+
+  async endorseStudentWork(id: string) {
+    await this.connect();
+    return await StudentWorkModel.findByIdAndUpdate(id, { isEndorsed: true }, { new: true });
+  }
+
+  // Access Passes
+  async createAccessPass(data: any) {
+    await this.connect();
+    const id = `pass_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return await AccessPassModel.create({ _id: id, ...data });
+  }
+
+  async getAccessPasses(studentAddress: string) {
+    await this.connect();
+    return await AccessPassModel.find({ studentAddress: new RegExp(`^${studentAddress}$`, 'i') });
+  }
+
+  async redeemAccessPass(id: string) {
+    await this.connect();
+    return await AccessPassModel.findByIdAndUpdate(id, { isRedeemed: true }, { new: true });
+  }
+
+  // Student Pet
+  async getStudentPet(studentAddress: string) {
+    await this.connect();
+    return await StudentPetModel.findOne({ studentAddress: new RegExp(`^${studentAddress}$`, 'i') });
+  }
+
+  async createOrUpdateStudentPet(studentAddress: string, data: any) {
+    await this.connect();
+    const existing = await StudentPetModel.findOne({ studentAddress: new RegExp(`^${studentAddress}$`, 'i') });
+    if (existing) {
+      return await StudentPetModel.findByIdAndUpdate(existing._id, data, { new: true });
+    } else {
+      const id = `pet_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      return await StudentPetModel.create({ _id: id, studentAddress: studentAddress.toLowerCase(), ...data });
+    }
   }
 }
 

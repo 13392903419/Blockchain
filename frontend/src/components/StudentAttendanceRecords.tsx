@@ -209,105 +209,134 @@ export function StudentAttendanceRecords() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-        <h3>我的出勤记录</h3>
-        <p>请先连接钱包并登录</p>
+      <div className="records-container">
+        <div className="records-header">
+          <div className="header-icon">📋</div>
+          <div className="header-content">
+            <h2>出勤记录</h2>
+            <p>请先连接钱包并登录以查看您的出勤记录</p>
+          </div>
+        </div>
+        <div className="auth-prompt">
+          <div className="auth-icon">🔐</div>
+          <p>需要身份验证才能查看出勤记录</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: 20, border: '1px solid #ccc', borderRadius: 8, marginTop: 24 }}>
-      <h3>我的出勤记录</h3>
+    <div className="records-container">
+      <div className="records-header">
+        <div className="header-icon">📊</div>
+        <div className="header-content">
+          <h2>我的出勤记录</h2>
+          <p>查看您的所有出勤记录和NFT凭证</p>
+        </div>
+      </div>
 
       {/* 筛选器 */}
-      <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div>
-          <label style={{ marginRight: 8 }}>选择课程（可选）: </label>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            style={{ padding: '4px 8px', minWidth: '200px' }}
-          >
-            <option value="">全部课程</option>
-            {courses.map(course => (
-              <option key={course.id} value={course.id}>
-                {course.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedCourseId && (
-          <div>
-            <label style={{ marginRight: 8 }}>选择课次（可选）: </label>
+      <div className="filters-section">
+        <div className="filters-grid">
+          <div className="form-group">
+            <label className="form-label">
+              <span className="label-icon">📚</span>
+              选择课程（可选）
+            </label>
             <select
-              value={selectedSessionId}
-              onChange={(e) => setSelectedSessionId(e.target.value)}
-              style={{ padding: '4px 8px', minWidth: '200px' }}
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+              className="form-select"
             >
-              <option value="">该课程全部课次</option>
-              {sessions.map(session => (
-                <option key={session.id} value={session.id}>
-                  {session.name} (#{session.sessionNumber})
+              <option value="">全部课程</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
                 </option>
               ))}
             </select>
           </div>
-        )}
 
-        <div>
+          {selectedCourseId && (
+            <div className="form-group">
+              <label className="form-label">
+                <span className="label-icon">📅</span>
+                选择课次（可选）
+              </label>
+              <select
+                value={selectedSessionId}
+                onChange={(e) => setSelectedSessionId(e.target.value)}
+                className="form-select"
+              >
+                <option value="">该课程全部课次</option>
+                {sessions.map(session => (
+                  <option key={session.id} value={session.id}>
+                    {session.name} (第{session.sessionNumber}次课)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="filter-actions">
           <button
             onClick={loadRecords}
             disabled={loading}
-            style={{ padding: '4px 12px' }}
+            className={`refresh-button ${loading ? 'loading' : ''}`}
           >
-            {loading ? '加载中...' : '刷新'}
+            <span className="button-icon">{loading ? '⏳' : '🔄'}</span>
+            <span className="button-text">{loading ? '加载中...' : '刷新记录'}</span>
           </button>
-          <span style={{ marginLeft: 12, fontSize: '12px', color: '#666' }}>
+          <div className="filter-info">
             {!selectedCourseId && !selectedSessionId && '显示您的全部出勤记录'}
             {selectedCourseId && !selectedSessionId && `显示 ${courses.find(c => c.id === selectedCourseId)?.name} 课程的出勤记录`}
             {selectedSessionId && `显示 ${sessions.find(s => s.id === selectedSessionId)?.name} 的出勤记录`}
-          </span>
+          </div>
         </div>
       </div>
 
       {/* 出勤记录列表 */}
-      <div>
-        <h4>出勤记录 ({records.length} 条)</h4>
+      <div className="records-section">
+        <div className="section-header">
+          <h3>出勤记录</h3>
+          <div className="records-count">
+            <span className="count-badge">{records.length}</span>
+            <span className="count-label">条记录</span>
+          </div>
+        </div>
+
         {records.length === 0 ? (
-          <p style={{ color: '#666' }}>
-            {loading ? '加载中...' : '暂无出勤记录'}
-          </p>
+          <div className="empty-state">
+            <div className="empty-icon">📭</div>
+            <h4>暂无出勤记录</h4>
+            <p>{loading ? '正在加载记录...' : '您还没有任何出勤记录'}</p>
+          </div>
         ) : (
-          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="records-table-container">
+            <table className="records-table">
               <thead>
-                <tr style={{ backgroundColor: '#f5f5f5' }}>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>课程名</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>课次</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>Token ID</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>状态</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>出勤时间</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>交易哈希</th>
+                <tr>
+                  <th>课程名称</th>
+                  <th>课次信息</th>
+                  <th>NFT凭证</th>
+                  <th>出勤状态</th>
+                  <th>记录时间</th>
+                  <th>区块链验证</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((record) => {
                   // 找到对应的session信息 - 尝试多种匹配方式
                   const session = allSessions.find(s => {
-                    // 尝试精确匹配
                     if (s.id === record.sessionId) return true
-                    // 尝试字符串转换匹配
                     if (String(s.id) === String(record.sessionId)) return true
                     return false
                   })
 
                   // 找到对应的课程信息
                   const course = session ? allCourses.find(c => {
-                    // 尝试精确匹配
                     if (c.id === session.courseId) return true
-                    // 尝试字符串转换匹配
                     if (String(c.id) === String(session.courseId)) return true
                     return false
                   }) : null
@@ -317,54 +346,68 @@ export function StudentAttendanceRecords() {
                   const sessionDisplayText = session ? session.name : `第${sessionNumber}次课`
                   const courseDisplayText = course ? course.name : `课程ID:${session?.courseId || '未知'}`
 
-                  // 调试信息 - 为每个记录都显示，方便调试
-                  console.log(`🔍 记录 ${record.id}:`, {
-                    recordSessionId: record.sessionId,
-                    recordSessionIdType: typeof record.sessionId,
-                    foundSession: session ? {
-                      id: session.id,
-                      idType: typeof session.id,
-                      name: session.name,
-                      courseId: session.courseId,
-                      courseIdType: typeof session.courseId
-                    } : null,
-                    foundCourse: course ? {
-                      id: course.id,
-                      idType: typeof course.id,
-                      name: course.name
-                    } : null,
-                    courseDisplayText,
-                    allSessionsCount: allSessions.length,
-                    allCoursesCount: allCourses.length
-                  })
-
                   return (
                     <tr key={record.id}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{courseDisplayText}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{sessionDisplayText}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {record.tokenId ? `#${record.tokenId}` : '-'}
+                      <td>
+                        <div className="course-cell">
+                          <div className="course-name">{courseDisplayText}</div>
+                        </div>
                       </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        <span style={{
-                          color: record.status === 'present' ? '#28a745' : '#dc3545',
-                          fontWeight: 'bold'
-                        }}>
-                          {record.status === 'present' ? '✅ 已出勤' : '❌ 缺勤'}
-                        </span>
+                      <td>
+                        <div className="session-cell">
+                          <div className="session-name">{sessionDisplayText}</div>
+                          <div className="session-number">#{session?.sessionNumber || sessionNumber}</div>
+                        </div>
                       </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {new Date(record.timestamp).toLocaleString()}
+                      <td>
+                        <div className="token-cell">
+                          {record.tokenId ? (
+                            <div className="nft-badge">
+                              <span className="nft-icon">🎨</span>
+                              <span className="nft-id">#{record.tokenId}</span>
+                            </div>
+                          ) : (
+                            <span className="no-token">-</span>
+                          )}
+                        </div>
                       </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', fontSize: '12px' }}>
-                        <a
-                          href={`https://etherscan.io/tx/${record.txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: '#007bff', textDecoration: 'none' }}
-                        >
-                          {`${record.txHash.slice(0, 10)}...${record.txHash.slice(-8)}`}
-                        </a>
+                      <td>
+                        <div className={`status-cell ${record.status}`}>
+                          <span className="status-icon">
+                            {record.status === 'present' ? '✅' : '❌'}
+                          </span>
+                          <span className="status-text">
+                            {record.status === 'present' ? '已出勤' : '缺勤'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="time-cell">
+                          <div className="timestamp">
+                            {new Date(record.timestamp).toLocaleDateString('zh-CN')}
+                          </div>
+                          <div className="time">
+                            {new Date(record.timestamp).toLocaleTimeString('zh-CN', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="blockchain-cell">
+                          <a
+                            href={`https://etherscan.io/tx/${record.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tx-link"
+                          >
+                            <span className="tx-icon">🔗</span>
+                            <span className="tx-hash">
+                              {`${record.txHash.slice(0, 6)}...${record.txHash.slice(-4)}`}
+                            </span>
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   )
