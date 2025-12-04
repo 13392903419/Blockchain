@@ -10,6 +10,7 @@ export interface Session {
     id: string;
     courseId: string;
     sessionNumber: number;
+    globalSessionId?: number;
     name: string;
     description?: string;
     startTime: number;

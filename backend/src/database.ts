@@ -298,14 +298,14 @@ class Database {
 
     return sessions.map(session => {
       const result: Session = {
-        id: session.id,
-        courseId: session.courseId,
-        sessionNumber: session.sessionNumber,
-        name: session.name,
-        startTime: session.startTime,
-        endTime: session.endTime,
-        createdAt: session.createdAt.getTime(),
-        updatedAt: session.updatedAt.getTime()
+      id: session.id,
+      courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
+      name: session.name,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      createdAt: session.createdAt.getTime(),
+      updatedAt: session.updatedAt.getTime()
       };
 
       // Conditionally include globalSessionId only when it exists
@@ -618,14 +618,14 @@ class Database {
 
     return sessions.map(session => {
       const result: Session = {
-        id: session.id,
-        courseId: session.courseId,
-        sessionNumber: session.sessionNumber,
-        name: session.name,
-        startTime: session.startTime,
-        endTime: session.endTime,
-        createdAt: session.createdAt.getTime(),
-        updatedAt: session.updatedAt.getTime()
+      id: session.id,
+      courseId: session.courseId,
+      sessionNumber: session.sessionNumber,
+      name: session.name,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      createdAt: session.createdAt.getTime(),
+      updatedAt: session.updatedAt.getTime()
       };
 
       // Conditionally include globalSessionId only when it exists

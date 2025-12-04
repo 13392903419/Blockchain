@@ -143,20 +143,20 @@ export function TeacherBatchMint() {
       const selectedSession = sessions.find(s => s.id === selectedSessionId)
       const contractSessionId = selectedSession?.globalSessionId || selectedSessionId
 
-      console.log('合约调用参数:', {
-        sessionId: contractSessionId,
-        student: addr,
-        tokenUri
-      })
+        console.log('合约调用参数:', {
+          sessionId: contractSessionId,
+          student: addr,
+          tokenUri
+        })
 
-      const hash = await writeContractAsync({
-        address: contractAddress,
-        abi: contractABI,
-        functionName: 'mintAttendance',
-        args: [BigInt(contractSessionId), addr as `0x${string}`, tokenUri],
-      })
+        const hash = await writeContractAsync({
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'mintAttendance',
+          args: [BigInt(contractSessionId), addr as `0x${string}`, tokenUri],
+        })
 
-      console.log('铸造成功:', hash)
+        console.log('铸造成功:', hash)
 
       // 铸造成功后，通过API记录出勤到数据库
       try {
@@ -219,75 +219,75 @@ export function TeacherBatchMint() {
       </div>
 
       <div className="mint-form">
-        {/* 课程选择 */}
+      {/* 课程选择 */}
         <div className="form-group">
           <label className="form-label">
             <span className="label-icon">📚</span>
             选择课程
           </label>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
+        <select
+          value={selectedCourseId}
+          onChange={(e) => setSelectedCourseId(e.target.value)}
             className="form-select"
-          >
-            <option value="">请选择课程</option>
-            {courses.map(course => (
-              <option key={course.id} value={course.id}>
-                {course.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        >
+          <option value="">请选择课程</option>
+          {courses.map(course => (
+            <option key={course.id} value={course.id}>
+              {course.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        {/* 课次选择 */}
+      {/* 课次选择 */}
         <div className="form-group">
           <label className="form-label">
             <span className="label-icon">📅</span>
             选择课次
           </label>
-          <select
-            value={selectedSessionId}
-            onChange={(e) => setSelectedSessionId(e.target.value)}
+        <select
+          value={selectedSessionId}
+          onChange={(e) => setSelectedSessionId(e.target.value)}
             className="form-select"
-            disabled={!selectedCourseId}
-          >
+          disabled={!selectedCourseId}
+        >
             <option value="">
               {selectedCourseId ? '请选择课次' : '请先选择课程'}
             </option>
-            {sessions.map(session => (
-              <option key={session.id} value={session.id}>
+          {sessions.map(session => (
+            <option key={session.id} value={session.id}>
                 {session.name} (第{session.sessionNumber}次课)
-              </option>
-            ))}
-          </select>
-        </div>
+            </option>
+          ))}
+        </select>
+      </div>
 
-        {/* 学生地址输入 */}
+      {/* 学生地址输入 */}
         <div className="form-group">
           <label className="form-label">
             <span className="label-icon">👨‍🎓</span>
             学生钱包地址
           </label>
-          <input
+        <input
             type="text"
-            value={studentAddress}
-            onChange={(e) => setStudentAddress(e.target.value)}
+          value={studentAddress}
+          onChange={(e) => setStudentAddress(e.target.value)}
             className="form-input"
-            placeholder="0x..."
+          placeholder="0x..."
             pattern="^0x[a-fA-F0-9]{40}$"
             title="请输入有效的以太坊地址"
-          />
+        />
           <div className="input-hint">
             输入学生的以太坊钱包地址，用于铸造NFT
           </div>
-        </div>
+      </div>
 
-        {/* Token URI输入 */}
+      {/* Token URI输入 */}
         <div className="form-group">
           <label className="form-label">
             <span className="label-icon">🎨</span>
             NFT元数据URI
-          </label>
+        </label>
           <input
             type="url"
             value={tokenUri}
@@ -298,12 +298,12 @@ export function TeacherBatchMint() {
           <div className="input-hint">
             NFT的元数据链接，包含出勤证明信息
           </div>
-        </div>
+      </div>
 
-        {/* 铸造按钮 */}
+      {/* 铸造按钮 */}
         <div className="form-actions">
-          <button
-            onClick={handleMint}
+        <button
+          onClick={handleMint}
             disabled={isMinting || !selectedSessionId || !studentAddress.trim()}
             className={`mint-button ${isMinting ? 'loading' : ''}`}
           >
@@ -313,11 +313,11 @@ export function TeacherBatchMint() {
             <span className="button-text">
               {isMinting ? '正在铸造...' : '铸造出勤NFT'}
             </span>
-          </button>
-        </div>
+        </button>
+      </div>
 
-        {/* 结果显示 */}
-        {mintResult && (
+      {/* 结果显示 */}
+      {mintResult && (
           <div className={`result-message ${mintResult.startsWith('✅') ? 'success' : 'error'}`}>
             <div className="result-icon">
               {mintResult.startsWith('✅') ? '✅' : '❌'}
@@ -325,10 +325,10 @@ export function TeacherBatchMint() {
             <div className="result-content">
               <pre className="result-text">{mintResult}</pre>
             </div>
-          </div>
-        )}
+        </div>
+      )}
 
-        {/* 调试信息 */}
+      {/* 调试信息 */}
         <div className="debug-info">
           <div className="debug-header">
             <span className="debug-icon">🔍</span>

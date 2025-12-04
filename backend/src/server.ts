@@ -107,6 +107,24 @@ async function startBlockchainListener(retryCount = 0) {
           status: attendanceRecord.status
         });
 
+        // 给学生宠物增加经验值 (+5 XP)
+        try {
+          const pet = await db.getStudentPet(student);
+          const currentExp = pet ? pet.experience : 0;
+          const newExp = currentExp + 5; // 出勤记录奖励5经验值
+          const newStage = Math.floor(newExp / 100); // 每100 XP升一级
+
+          await db.createOrUpdateStudentPet(student, {
+            stage: Math.min(newStage, 2), // 最多升到花朵阶段
+            experience: newExp
+          });
+
+          console.log(`🎉 学生 ${student} 出勤成功！获得5 XP奖励，当前经验值: ${newExp}`);
+        } catch (petError) {
+          console.warn('宠物经验值更新失败:', petError);
+          // 不影响出勤记录的主流程
+        }
+
       } catch (error: any) {
         console.error('❌ 处理出勤记录事件失败:', error.message);
         console.error('   错误详情:', error);
@@ -672,6 +690,24 @@ app.post("/api/certificates", authenticateToken, requireTeacher, async (req: any
       txHash
     });
 
+    // 如果证书创建成功，给学生宠物增加经验值 (+50 XP)
+    try {
+      const pet = await db.getStudentPet(studentAddress);
+      const currentExp = pet ? pet.experience : 0;
+      const newExp = currentExp + 50; // 颁发证书奖励50经验值
+      const newStage = Math.floor(newExp / 100); // 每100 XP升一级
+
+      await db.createOrUpdateStudentPet(studentAddress, {
+        stage: Math.min(newStage, 2), // 最多升到花朵阶段
+        experience: newExp
+      });
+
+      console.log(`🎉 学生 ${studentAddress} 获得证书！获得50 XP奖励，当前经验值: ${newExp}`);
+    } catch (petError) {
+      console.warn('宠物经验值更新失败:', petError);
+      // 不影响颁发证书的主流程
+    }
+
     console.log('证书创建成功:', cert);
     res.json(cert);
   } catch (error: any) {
@@ -702,6 +738,25 @@ app.post("/api/student-work", authenticateToken, requireStudent, async (req: any
       tokenId,
       txHash
     });
+
+    // 如果作品创建成功，给学生宠物增加经验值 (+10 XP)
+    try {
+      const pet = await db.getStudentPet(req.user!.address);
+      const currentExp = pet ? pet.experience : 0;
+      const newExp = currentExp + 10; // 铸造作品奖励10经验值
+      const newStage = Math.floor(newExp / 100); // 每100 XP升一级
+
+      await db.createOrUpdateStudentPet(req.user!.address, {
+        stage: Math.min(newStage, 2), // 最多升到花朵阶段
+        experience: newExp
+      });
+
+      console.log(`🎉 学生 ${req.user!.address} 铸造作品成功！获得10 XP奖励，当前经验值: ${newExp}`);
+    } catch (petError) {
+      console.warn('宠物经验值更新失败:', petError);
+      // 不影响铸造作品的主流程
+    }
+
     res.json(work);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -720,7 +775,29 @@ app.get("/api/student-work", authenticateToken, async (req: any, res: any) => {
 
 app.post("/api/student-work/:id/endorse", authenticateToken, requireTeacher, async (req: any, res: any) => {
   try {
+    // 先认证作品
     const work = await db.endorseStudentWork(req.params.id!);
+
+    // 如果认证成功，给学生宠物增加经验值 (+30 XP)
+    if (work && work.studentAddress) {
+      try {
+        const pet = await db.getStudentPet(work.studentAddress);
+        const currentExp = pet ? pet.experience : 0;
+        const newExp = currentExp + 30; // 认证作品奖励30经验值
+        const newStage = Math.floor(newExp / 100); // 每100 XP升一级
+
+        await db.createOrUpdateStudentPet(work.studentAddress, {
+          stage: Math.min(newStage, 2), // 最多升到花朵阶段
+          experience: newExp
+        });
+
+        console.log(`🎉 学生 ${work.studentAddress} 作品认证成功！获得30 XP奖励，当前经验值: ${newExp}`);
+      } catch (petError) {
+        console.warn('宠物经验值更新失败:', petError);
+        // 不影响认证作品的主流程
+      }
+    }
+
     res.json(work);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -761,7 +838,7 @@ app.post("/api/access-pass/:id/redeem", authenticateToken, async (req: any, res:
 
     // 首先获取通行证信息，确认所有权
     const passes = await db.getAccessPasses(req.user!.address);
-    const pass = passes.find(p => p._id === id);
+    const pass = passes.find((p: any) => p._id === id);
 
     if (!pass) {
       return res.status(404).json({ error: '通行证不存在或不属于当前用户' });
@@ -774,6 +851,24 @@ app.post("/api/access-pass/:id/redeem", authenticateToken, async (req: any, res:
     // 兑换通行证
     const updatedPass = await db.redeemAccessPass(id);
     console.log('通行证兑换成功:', updatedPass);
+
+    // 如果兑换成功，给学生宠物增加经验值 (+20 XP)
+    try {
+      const pet = await db.getStudentPet(req.user!.address);
+      const currentExp = pet ? pet.experience : 0;
+      const newExp = currentExp + 20; // 兑换通行证奖励20经验值
+      const newStage = Math.floor(newExp / 100); // 每100 XP升一级
+
+      await db.createOrUpdateStudentPet(req.user!.address, {
+        stage: Math.min(newStage, 2), // 最多升到花朵阶段
+        experience: newExp
+      });
+
+      console.log(`🎉 学生 ${req.user!.address} 兑换通行证成功！获得20 XP奖励，当前经验值: ${newExp}`);
+    } catch (petError) {
+      console.warn('宠物经验值更新失败:', petError);
+      // 不影响兑换通行证的主流程
+    }
 
     res.json(updatedPass);
   } catch (error: any) {
