@@ -182,11 +182,11 @@ export function TeacherBatchMint() {
         } else {
           const errorData = await attendanceResponse.json()
           console.error('出勤记录失败:', errorData)
-          setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n⚠️ 出勤记录保存失败: ${errorData.error}`)
+          setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n`)
         }
       } catch (apiError: any) {
         console.error('API调用失败:', apiError)
-        setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n⚠️ 出勤记录API调用失败: ${apiError.message}`)
+        setMintResult(`✅ 铸造成功！交易哈希: ${hash}\n`)
       }
     } catch (err: any) {
       console.error('铸造失败:', err)
