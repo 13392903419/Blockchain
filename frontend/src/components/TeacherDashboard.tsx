@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { Gallery } from './Gallery'
 import { Navbar } from './Navbar'
 import { CourseManager } from './CourseManager'
 import { AttendanceRecords } from './AttendanceRecords'
@@ -7,7 +8,7 @@ import { AttendanceReports } from './AttendanceReports'
 import { TeacherBatchMint } from './TeacherBatchMint'
 import { TeacherAdvancedPanel } from './TeacherAdvancedPanel'
 
-type TeacherTab = 'overview' | 'courses' | 'records' | 'reports' | 'batch-mint' | 'advanced'
+type TeacherTab = 'overview' | 'courses' | 'records' | 'reports' | 'batch-mint' | 'advanced' | 'gallery'
 
 export function TeacherDashboard() {
   const { address, userRole, logout, getAuthHeaders, token } = useAuth()
@@ -25,6 +26,7 @@ export function TeacherDashboard() {
     { id: 'records' as TeacherTab, label: '出勤记录', icon: '📋' },
     { id: 'reports' as TeacherTab, label: '统计报表', icon: '📈' },
     { id: 'batch-mint' as TeacherTab, label: '批量铸造', icon: '🎓' },
+    { id: 'gallery' as TeacherTab, label: '作品画廊', icon: '🎨' },
     { id: 'advanced' as TeacherTab, label: '高级功能', icon: '🛠️' }
   ]
 
@@ -188,13 +190,12 @@ export function TeacherDashboard() {
                   <div className="card-icon">📚</div>
                   <h3>课程管理</h3>
                 </div>
-                <p>创建新课程、添加课次、设置出勤规则</p>
                 <button
                   className="action-btn primary large"
                   onClick={() => setActiveTab('courses')}
                 >
                   <span className="button-icon">🚀</span>
-                  进入管理
+                  
                 </button>
               </div>
 
@@ -209,7 +210,7 @@ export function TeacherDashboard() {
                   onClick={() => setActiveTab('batch-mint')}
                 >
                   <span className="button-icon">⚡</span>
-                  开始铸造
+                  
                 </button>
               </div>
 
@@ -224,7 +225,7 @@ export function TeacherDashboard() {
                   onClick={() => setActiveTab('records')}
                 >
                   <span className="button-icon">📊</span>
-                  查看记录
+                  
                 </button>
               </div>
 
@@ -239,7 +240,6 @@ export function TeacherDashboard() {
                   onClick={() => setActiveTab('reports')}
                 >
                   <span className="button-icon">📈</span>
-                  查看报表
                 </button>
               </div>
             </div>
@@ -301,6 +301,13 @@ export function TeacherDashboard() {
         return (
           <div className="dashboard-content">
             <TeacherBatchMint />
+          </div>
+        )
+
+      case 'gallery':
+        return (
+          <div className="dashboard-content">
+            <Gallery />
           </div>
         )
 

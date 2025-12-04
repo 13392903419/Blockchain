@@ -902,7 +902,97 @@ app.post("/api/student-pet/update", authenticateToken, requireTeacher, async (re
   }
 });
 
-// 5. POAP Synthesis (Placeholder for logic)
+// 5. Gallery APIs - 作品画廊
+app.get("/api/gallery", authenticateToken, async (req: any, res: any) => {
+  try {
+    const works = await db.getGalleryWorks();
+    res.json(works);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 点赞作品
+app.post("/api/student-work/:id/like", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const userAddress = req.user!.address;
+
+    // 检查是否已经点赞
+    const hasLiked = await db.hasLiked(id, userAddress);
+    if (hasLiked) {
+      return res.status(400).json({ error: '已经点赞过了' });
+    }
+
+    const like = await db.addLike(id, userAddress);
+    const likesCount = await db.getLikesCount(id);
+
+    res.json({ like, likesCount });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 取消点赞
+app.delete("/api/student-work/:id/like", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const userAddress = req.user!.address;
+
+    const removedLike = await db.removeLike(id, userAddress);
+    const likesCount = await db.getLikesCount(id);
+
+    res.json({ removed: !!removedLike, likesCount });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 检查是否已点赞
+app.get("/api/student-work/:id/like", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const userAddress = req.user!.address;
+
+    const hasLiked = await db.hasLiked(id, userAddress);
+    const likesCount = await db.getLikesCount(id);
+
+    res.json({ hasLiked, likesCount });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 添加评论
+app.post("/api/student-work/:id/comment", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    const userAddress = req.user!.address;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: '评论内容不能为空' });
+    }
+
+    const comment = await db.addComment(id, userAddress, content.trim());
+    res.json(comment);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 获取作品评论
+app.get("/api/student-work/:id/comments", authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const comments = await db.getComments(id);
+    res.json(comments);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 6. POAP Synthesis (Placeholder for logic)
 app.post("/api/poap/synthesize", authenticateToken, requireStudent, async (req: any, res: any) => {
   // In a real implementation, this might check eligibility or record the synthesis event
   // For now, we assume the synthesis happens on-chain and we just record it if needed

@@ -5,9 +5,10 @@ import { StudentCheckin } from './StudentCheckin'
 import { StudentAttendanceRecords } from './StudentAttendanceRecords'
 import { Showcase } from './Showcase'
 import { StudentWorkMint } from './StudentWorkMint'
+import { Gallery } from './Gallery'
 import { AccessPassMarket } from './AccessPassMarket'
 
-type StudentTab = 'overview' | 'checkin' | 'records' | 'showcase' | 'work' | 'market'
+type StudentTab = 'overview' | 'checkin' | 'records' | 'showcase' | 'work' | 'gallery' | 'market'
 
 export function StudentDashboard() {
   const { address, userRole, logout, getAuthHeaders, token } = useAuth()
@@ -25,6 +26,7 @@ export function StudentDashboard() {
     { id: 'records' as StudentTab, label: '📋 我的记录', icon: '📋' },
     { id: 'showcase' as StudentTab, label: '🎓 我的展示', icon: '🎓' },
     { id: 'work' as StudentTab, label: '🎨 铸造作品', icon: '🎨' },
+    { id: 'gallery' as StudentTab, label: '🎨 作品画廊', icon: '🎨' },
     { id: 'market' as StudentTab, label: '🎟️ 权益市场', icon: '🎟️' }
   ]
 
@@ -290,6 +292,13 @@ export function StudentDashboard() {
         return (
           <div className="dashboard-content">
             <StudentWorkMint />
+          </div>
+        )
+
+      case 'gallery':
+        return (
+          <div className="dashboard-content">
+            <Gallery />
           </div>
         )
 

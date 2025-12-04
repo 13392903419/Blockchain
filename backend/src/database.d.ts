@@ -262,6 +262,77 @@ declare class Database {
     } & Required<{
         _id: string;
     }>) | null>;
+    addLike(workId: string, userAddress: string): Promise<mongoose.Document<unknown, {}, {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        _id?: string;
+    }> & {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        _id?: string;
+    } & Required<{
+        _id: string;
+    }>>;
+    removeLike(workId: string, userAddress: string): Promise<mongoose.ModifyResult<mongoose.Document<unknown, {}, {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        _id?: string;
+    }> & {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        _id?: string;
+    } & Required<{
+        _id: string;
+    }>>>;
+    hasLiked(workId: string, userAddress: string): Promise<boolean>;
+    getLikesCount(workId: string): Promise<number>;
+    addComment(workId: string, userAddress: string, content: string): Promise<mongoose.Document<unknown, {}, {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        content: string;
+        _id?: string;
+    }> & {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        content: string;
+        _id?: string;
+    } & Required<{
+        _id: string;
+    }>>;
+    getComments(workId: string): Promise<(mongoose.Document<unknown, {}, {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        content: string;
+        _id?: string;
+    }> & {
+        createdAt: Date;
+        workId: string;
+        userAddress: string;
+        content: string;
+        _id?: string;
+    } & Required<{
+        _id: string;
+    }>)[]>;
+    getGalleryWorks(): Promise<{
+        likesCount: number;
+        commentsCount: number;
+        createdAt: Date;
+        studentAddress: string;
+        title: string;
+        fileUrl: string;
+        isEndorsed: boolean;
+        _id: string;
+        description?: string;
+        tokenId?: string;
+        txHash?: string;
+    }[]>;
 }
 export declare const db: Database;
 export {};

@@ -49,4 +49,30 @@ export interface CourseStats {
     totalAttendance: number;
     averageAttendanceRate: number;
 }
+export interface Like {
+    id: string;
+    workId: string;
+    userAddress: string;
+    createdAt: number;
+}
+export interface Comment {
+    id: string;
+    workId: string;
+    userAddress: string;
+    content: string;
+    createdAt: number;
+}
+export interface GalleryWork {
+    id: string;
+    studentAddress: string;
+    title: string;
+    description?: string;
+    fileUrl?: string;
+    tokenId?: string;
+    txHash?: string;
+    isEndorsed: boolean;
+    createdAt: number;
+    likesCount: number;
+    commentsCount: number;
+}
 //# sourceMappingURL=types.d.ts.map

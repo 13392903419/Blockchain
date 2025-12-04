@@ -105,10 +105,29 @@ const studentPetSchema = new mongoose.Schema({
   lastUpdated: { type: Date, default: Date.now }
 });
 
+// 点赞记录schema
+const likeSchema = new mongoose.Schema({
+  _id: { type: String },
+  workId: { type: String, required: true }, // 关联的作品ID
+  userAddress: { type: String, required: true }, // 点赞用户地址
+  createdAt: { type: Date, default: Date.now }
+});
+
+// 评论记录schema
+const commentSchema = new mongoose.Schema({
+  _id: { type: String },
+  workId: { type: String, required: true }, // 关联的作品ID
+  userAddress: { type: String, required: true }, // 评论用户地址
+  content: { type: String, required: true }, // 评论内容
+  createdAt: { type: Date, default: Date.now }
+});
+
 const CertificateModel = mongoose.model('Certificate', certificateSchema);
 const StudentWorkModel = mongoose.model('StudentWork', studentWorkSchema);
 const AccessPassModel = mongoose.model('AccessPass', accessPassSchema);
 const StudentPetModel = mongoose.model('StudentPet', studentPetSchema);
+const LikeModel = mongoose.model('Like', likeSchema);
+const CommentModel = mongoose.model('Comment', commentSchema);
 
 // 数据库连接
 let isConnected = false;
@@ -731,6 +750,73 @@ class Database {
       const id = `pet_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       return await StudentPetModel.create({ _id: id, studentAddress: studentAddress.toLowerCase(), ...data });
     }
+  }
+
+  // Likes and Comments
+  async addLike(workId: string, userAddress: string) {
+    await this.connect();
+    const id = `like_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return await LikeModel.create({
+      _id: id,
+      workId,
+      userAddress: userAddress.toLowerCase()
+    });
+  }
+
+  async removeLike(workId: string, userAddress: string) {
+    await this.connect();
+    return await LikeModel.findOneAndDelete({
+      workId,
+      userAddress: new RegExp(`^${userAddress}$`, 'i')
+    });
+  }
+
+  async hasLiked(workId: string, userAddress: string) {
+    await this.connect();
+    const like = await LikeModel.findOne({
+      workId,
+      userAddress: new RegExp(`^${userAddress}$`, 'i')
+    });
+    return !!like;
+  }
+
+  async getLikesCount(workId: string) {
+    await this.connect();
+    return await LikeModel.countDocuments({ workId });
+  }
+
+  async addComment(workId: string, userAddress: string, content: string) {
+    await this.connect();
+    const id = `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return await CommentModel.create({
+      _id: id,
+      workId,
+      userAddress: userAddress.toLowerCase(),
+      content
+    });
+  }
+
+  async getComments(workId: string) {
+    await this.connect();
+    return await CommentModel.find({ workId }).sort({ createdAt: -1 });
+  }
+
+  async getGalleryWorks() {
+    await this.connect();
+    const works = await StudentWorkModel.find().sort({ createdAt: -1 });
+
+    // 为每个作品添加点赞数和评论数
+    const worksWithStats = await Promise.all(works.map(async (work) => {
+      const likesCount = await this.getLikesCount(work._id);
+      const commentsCount = await CommentModel.countDocuments({ workId: work._id });
+      return {
+        ...work.toObject(),
+        likesCount,
+        commentsCount
+      };
+    }));
+
+    return worksWithStats;
   }
 }
 
