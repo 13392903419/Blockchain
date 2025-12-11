@@ -26,14 +26,20 @@ import type {
 export interface StudentPetNFTInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "SEED_TO_SPROUT"
+      | "SPROUT_TO_FLOWER"
+      | "addExperience"
       | "approve"
       | "balanceOf"
       | "getApproved"
+      | "getOrCreatePetTokenId"
+      | "getPetInfo"
       | "isApprovedForAll"
       | "mintPet"
       | "name"
       | "owner"
       | "ownerOf"
+      | "petExperience"
       | "petStages"
       | "renounceOwnership"
       | "safeTransferFrom(address,address,uint256)"
@@ -41,6 +47,7 @@ export interface StudentPetNFTInterface extends Interface {
       | "setApprovalForAll"
       | "setStageURI"
       | "stageURIs"
+      | "studentToTokenId"
       | "supportsInterface"
       | "symbol"
       | "tokenURI"
@@ -53,12 +60,25 @@ export interface StudentPetNFTInterface extends Interface {
     nameOrSignatureOrTopic:
       | "Approval"
       | "ApprovalForAll"
+      | "ExperienceAdded"
       | "OwnershipTransferred"
       | "PetEvolved"
       | "PetMinted"
       | "Transfer"
   ): EventFragment;
 
+  encodeFunctionData(
+    functionFragment: "SEED_TO_SPROUT",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "SPROUT_TO_FLOWER",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "addExperience",
+    values: [AddressLike, BigNumberish]
+  ): string;
   encodeFunctionData(
     functionFragment: "approve",
     values: [AddressLike, BigNumberish]
@@ -72,6 +92,14 @@ export interface StudentPetNFTInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "getOrCreatePetTokenId",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getPetInfo",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "isApprovedForAll",
     values: [AddressLike, AddressLike]
   ): string;
@@ -83,6 +111,10 @@ export interface StudentPetNFTInterface extends Interface {
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "ownerOf",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "petExperience",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -114,6 +146,10 @@ export interface StudentPetNFTInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "studentToTokenId",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "supportsInterface",
     values: [BytesLike]
   ): string;
@@ -135,12 +171,29 @@ export interface StudentPetNFTInterface extends Interface {
     values: [BigNumberish, BigNumberish]
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "SEED_TO_SPROUT",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "SPROUT_TO_FLOWER",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "addExperience",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getApproved",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getOrCreatePetTokenId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "getPetInfo", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isApprovedForAll",
     data: BytesLike
@@ -149,6 +202,10 @@ export interface StudentPetNFTInterface extends Interface {
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ownerOf", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "petExperience",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "petStages", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
@@ -171,6 +228,10 @@ export interface StudentPetNFTInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "stageURIs", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "studentToTokenId",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "supportsInterface",
     data: BytesLike
@@ -231,6 +292,24 @@ export namespace ApprovalForAllEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace ExperienceAddedEvent {
+  export type InputTuple = [
+    tokenId: BigNumberish,
+    amount: BigNumberish,
+    newTotal: BigNumberish
+  ];
+  export type OutputTuple = [tokenId: bigint, amount: bigint, newTotal: bigint];
+  export interface OutputObject {
+    tokenId: bigint;
+    amount: bigint;
+    newTotal: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace OwnershipTransferredEvent {
   export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
   export type OutputTuple = [previousOwner: string, newOwner: string];
@@ -245,10 +324,19 @@ export namespace OwnershipTransferredEvent {
 }
 
 export namespace PetEvolvedEvent {
-  export type InputTuple = [tokenId: BigNumberish, newStage: BigNumberish];
-  export type OutputTuple = [tokenId: bigint, newStage: bigint];
+  export type InputTuple = [
+    tokenId: BigNumberish,
+    oldStage: BigNumberish,
+    newStage: BigNumberish
+  ];
+  export type OutputTuple = [
+    tokenId: bigint,
+    oldStage: bigint,
+    newStage: bigint
+  ];
   export interface OutputObject {
     tokenId: bigint;
+    oldStage: bigint;
     newStage: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -331,6 +419,16 @@ export interface StudentPetNFT extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  SEED_TO_SPROUT: TypedContractMethod<[], [bigint], "view">;
+
+  SPROUT_TO_FLOWER: TypedContractMethod<[], [bigint], "view">;
+
+  addExperience: TypedContractMethod<
+    [studentAddress: AddressLike, amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   approve: TypedContractMethod<
     [to: AddressLike, tokenId: BigNumberish],
     [void],
@@ -340,6 +438,24 @@ export interface StudentPetNFT extends BaseContract {
   balanceOf: TypedContractMethod<[owner: AddressLike], [bigint], "view">;
 
   getApproved: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+
+  getOrCreatePetTokenId: TypedContractMethod<
+    [student: AddressLike],
+    [bigint],
+    "nonpayable"
+  >;
+
+  getPetInfo: TypedContractMethod<
+    [studentAddress: AddressLike],
+    [
+      [bigint, bigint, bigint] & {
+        tokenId: bigint;
+        stage: bigint;
+        experience: bigint;
+      }
+    ],
+    "view"
+  >;
 
   isApprovedForAll: TypedContractMethod<
     [owner: AddressLike, operator: AddressLike],
@@ -354,6 +470,8 @@ export interface StudentPetNFT extends BaseContract {
   owner: TypedContractMethod<[], [string], "view">;
 
   ownerOf: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+
+  petExperience: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
 
   petStages: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
 
@@ -390,6 +508,8 @@ export interface StudentPetNFT extends BaseContract {
 
   stageURIs: TypedContractMethod<[arg0: BigNumberish], [string], "view">;
 
+  studentToTokenId: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+
   supportsInterface: TypedContractMethod<
     [interfaceId: BytesLike],
     [boolean],
@@ -423,6 +543,19 @@ export interface StudentPetNFT extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "SEED_TO_SPROUT"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "SPROUT_TO_FLOWER"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "addExperience"
+  ): TypedContractMethod<
+    [studentAddress: AddressLike, amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "approve"
   ): TypedContractMethod<
     [to: AddressLike, tokenId: BigNumberish],
@@ -435,6 +568,22 @@ export interface StudentPetNFT extends BaseContract {
   getFunction(
     nameOrSignature: "getApproved"
   ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+  getFunction(
+    nameOrSignature: "getOrCreatePetTokenId"
+  ): TypedContractMethod<[student: AddressLike], [bigint], "nonpayable">;
+  getFunction(
+    nameOrSignature: "getPetInfo"
+  ): TypedContractMethod<
+    [studentAddress: AddressLike],
+    [
+      [bigint, bigint, bigint] & {
+        tokenId: bigint;
+        stage: bigint;
+        experience: bigint;
+      }
+    ],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "isApprovedForAll"
   ): TypedContractMethod<
@@ -454,6 +603,9 @@ export interface StudentPetNFT extends BaseContract {
   getFunction(
     nameOrSignature: "ownerOf"
   ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+  getFunction(
+    nameOrSignature: "petExperience"
+  ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
   getFunction(
     nameOrSignature: "petStages"
   ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
@@ -497,6 +649,9 @@ export interface StudentPetNFT extends BaseContract {
     nameOrSignature: "stageURIs"
   ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
   getFunction(
+    nameOrSignature: "studentToTokenId"
+  ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+  getFunction(
     nameOrSignature: "supportsInterface"
   ): TypedContractMethod<[interfaceId: BytesLike], [boolean], "view">;
   getFunction(
@@ -536,6 +691,13 @@ export interface StudentPetNFT extends BaseContract {
     ApprovalForAllEvent.InputTuple,
     ApprovalForAllEvent.OutputTuple,
     ApprovalForAllEvent.OutputObject
+  >;
+  getEvent(
+    key: "ExperienceAdded"
+  ): TypedContractEvent<
+    ExperienceAddedEvent.InputTuple,
+    ExperienceAddedEvent.OutputTuple,
+    ExperienceAddedEvent.OutputObject
   >;
   getEvent(
     key: "OwnershipTransferred"
@@ -589,6 +751,17 @@ export interface StudentPetNFT extends BaseContract {
       ApprovalForAllEvent.OutputObject
     >;
 
+    "ExperienceAdded(uint256,uint256,uint256)": TypedContractEvent<
+      ExperienceAddedEvent.InputTuple,
+      ExperienceAddedEvent.OutputTuple,
+      ExperienceAddedEvent.OutputObject
+    >;
+    ExperienceAdded: TypedContractEvent<
+      ExperienceAddedEvent.InputTuple,
+      ExperienceAddedEvent.OutputTuple,
+      ExperienceAddedEvent.OutputObject
+    >;
+
     "OwnershipTransferred(address,address)": TypedContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
@@ -600,7 +773,7 @@ export interface StudentPetNFT extends BaseContract {
       OwnershipTransferredEvent.OutputObject
     >;
 
-    "PetEvolved(uint256,uint8)": TypedContractEvent<
+    "PetEvolved(uint256,uint8,uint8)": TypedContractEvent<
       PetEvolvedEvent.InputTuple,
       PetEvolvedEvent.OutputTuple,
       PetEvolvedEvent.OutputObject

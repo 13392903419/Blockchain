@@ -85,8 +85,10 @@ async function main() {
   console.log("- backend/.env: CONTRACT_ADDRESS=[RoleManager地址]");
   console.log("- frontend/.env.local: VITE_CONTRACT_ADDRESS=[AttendanceNFT地址]");
   console.log("");
-  console.log("💡 这体现了真正的区块链原生应用：");
-  console.log("   合约地址由区块链网络动态决定，不依赖人工固定！");
+  console.log("💡 关于合约地址：");
+  console.log("   • 部署时会生成新的合约地址（由区块链网络决定）");
+  console.log("   • 本地开发环境：代码中已配置默认地址（Hardhat本地网络确定性地址）");
+  console.log("   • 生产环境：必须通过环境变量配置上述地址，不要使用默认值！");
 }
 
 main().catch((error) => {

@@ -1,0 +1,19 @@
+Deploying contracts with the account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+RoleManager deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+AttendanceNFT deployed to: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+AttendanceNFT linked to RoleManager
+CertificateSBT deployed to: 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+AccessPassNFT deployed to: 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+StudentWorkNFT deployed to: 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707
+StudentPetNFT deployed to: 0x0165878A594ca255338adfa4d48449f69242Eb8F
+AttendanceSynthesizer deployed to: 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853
+
+🎉 部署完成！请将以下地址复制到 backend/.env 文件：
+
+CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+STUDENT_PET_CONTRACT_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F
+
+💡 注意：
+   • CONTRACT_ADDRESS 是 RoleManager 合约地址
+   • STUDENT_PET_CONTRACT_ADDRESS 是 StudentPetNFT 合约地址（用于完全去中心化的宠物系统）
+   • 确保设置了 OWNER_PRIVATE_KEY 环境变量（合约所有者的私钥）

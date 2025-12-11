@@ -1,0 +1,6 @@
+await owner2.getAddress();
+const [owner2] = await ethers.getSigners();
+const [owner] = await ethers.getSigners();
+console
+const [owner] = await ethers.getSigners();
+const [owner] = await ethers.getSigners()

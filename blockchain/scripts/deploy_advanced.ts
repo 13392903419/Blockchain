@@ -44,7 +44,8 @@ async function main() {
     const StudentPetNFT = await ethers.getContractFactory("StudentPetNFT");
     const studentPetNFT = await StudentPetNFT.deploy(deployer.address);
     await studentPetNFT.waitForDeployment();
-    console.log("StudentPetNFT deployed to:", await studentPetNFT.getAddress());
+    const studentPetNFTAddress = await studentPetNFT.getAddress();
+    console.log("StudentPetNFT deployed to:", studentPetNFTAddress);
 
     // 7. Deploy AttendanceSynthesizer
     const AttendanceSynthesizer = await ethers.getContractFactory("AttendanceSynthesizer");
@@ -52,7 +53,13 @@ async function main() {
     await attendanceSynthesizer.waitForDeployment();
     console.log("AttendanceSynthesizer deployed to:", await attendanceSynthesizer.getAddress());
 
-    console.log("\nDeployment Complete! Copy these addresses to your backend .env file.");
+    console.log("\n🎉 部署完成！请将以下地址复制到 backend/.env 文件：\n");
+    console.log("CONTRACT_ADDRESS=" + roleManagerAddress);
+    console.log("STUDENT_PET_CONTRACT_ADDRESS=" + studentPetNFTAddress);
+    console.log("\n💡 注意：");
+    console.log("   • CONTRACT_ADDRESS 是 RoleManager 合约地址");
+    console.log("   • STUDENT_PET_CONTRACT_ADDRESS 是 StudentPetNFT 合约地址（用于完全去中心化的宠物系统）");
+    console.log("   • 确保设置了 OWNER_PRIVATE_KEY 环境变量（合约所有者的私钥）");
 }
 
 main()

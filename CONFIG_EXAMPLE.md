@@ -12,7 +12,12 @@ MONGODB_URI=mongodb://localhost:27017/nft_attendance
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 
 # 区块链合约地址（部署后填写）
-ROLE_MANAGER_CONTRACT_ADDRESS=0x[部署时生成的地址]
+CONTRACT_ADDRESS=0x[RoleManager部署时生成的地址]
+STUDENT_PET_CONTRACT_ADDRESS=0x[StudentPetNFT部署时生成的地址]
+
+# 区块链RPC和私钥（用于后端调用合约）
+RPC_URL=http://127.0.0.1:8545
+OWNER_PRIVATE_KEY=0x[合约所有者的私钥，用于签名交易]
 
 # 开发环境设置
 NODE_ENV=development
@@ -44,13 +49,23 @@ ETHERSCAN_API_KEY=your-etherscan-api-key
 
 ## 🔑 如何获取配置值
 
-### 1. ROLE_MANAGER_CONTRACT_ADDRESS
+### 1. CONTRACT_ADDRESS (RoleManager)
 运行部署脚本后会自动显示：
 ```
 RoleManager deployed to: 0x1234567890123456789012345678901234567890
 请将以下地址复制到 backend/.env:
-ROLE_MANAGER_CONTRACT_ADDRESS=0x1234567890123456789012345678901234567890
+CONTRACT_ADDRESS=0x1234567890123456789012345678901234567890
 ```
+
+### 2. STUDENT_PET_CONTRACT_ADDRESS
+运行部署脚本后会自动显示：
+```
+StudentPetNFT deployed to: 0x1234567890123456789012345678901234567890
+请将以下地址复制到 backend/.env:
+STUDENT_PET_CONTRACT_ADDRESS=0x1234567890123456789012345678901234567890
+```
+
+> **注意**: 如果使用 `deploy_advanced.ts` 脚本，会同时部署所有合约并显示所有地址。
 
 ### 2. JWT_SECRET
 生成一个强密码：

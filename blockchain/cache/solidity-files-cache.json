@@ -1303,8 +1303,8 @@
       ]
     },
     "D:\\aaa东华大学\\专业课\\Blockchain\\NFT_attendance\\blockchain\\contracts\\StudentPetNFT.sol": {
-      "lastModificationDate": 1764208300592,
-      "contentHash": "76226f0a4ee91bbd0ff5af43f763ca57",
+      "lastModificationDate": 1765421035666,
+      "contentHash": "3823d83b1705f8a4f2de69f9fda7d36c",
       "sourceName": "contracts/StudentPetNFT.sol",
       "solcConfig": {
         "version": "0.8.24",
