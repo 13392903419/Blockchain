@@ -4,11 +4,92 @@ const dotenv = require("dotenv");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { ethers } = require("ethers");
+const path = require("path");
 const { generateChallenge, verifySignature, generateToken, isTeacher } = require("./auth");
 const { authenticateToken, requireTeacher, requireStudent } = require("./middleware");
 const { db, connectDB } = require("./database");
 
-dotenv.config();
+// 明确指定 .env 文件路径
+// 尝试多个可能的路径
+const possiblePaths = [
+  path.resolve(process.cwd(), '.env'),           // 当前工作目录
+  path.resolve(__dirname || process.cwd(), '../.env'),  // backend/.env (如果从 src 运行)
+  path.resolve(process.cwd(), 'backend/.env'),   // 从项目根目录运行时的路径
+];
+
+let envPath: string | null = null;
+let envResult: any = null;
+
+for (const envFilePath of possiblePaths) {
+  envResult = dotenv.config({ path: envFilePath });
+  if (!envResult.error) {
+    envPath = envFilePath;
+    console.log(`✅ 已加载 .env 文件: ${envPath}`);
+    break;
+  }
+}
+
+if (!envPath) {
+  console.warn(`⚠️ 无法从以下路径加载 .env 文件:`);
+  possiblePaths.forEach(p => console.warn(`   - ${p}`));
+  console.warn(`   尝试从默认位置加载...`);
+  // 如果所有路径都失败，尝试默认路径
+  envResult = dotenv.config();
+  envPath = path.resolve(process.cwd(), '.env');
+}
+
+// 检查关键环境变量
+function checkEnvironmentVariables() {
+  const requiredVars: string[] = [];
+  const recommendedVars: string[] = ['STUDENT_PET_CONTRACT_ADDRESS'];
+  
+  // 检查必需的环境变量
+  for (const varName of requiredVars) {
+    if (!process.env[varName]) {
+      console.error(`❌ 必需的环境变量 ${varName} 未设置`);
+      process.exit(1);
+    }
+  }
+  
+  // 检查推荐的环境变量
+  for (const varName of recommendedVars) {
+    if (!process.env[varName]) {
+      console.warn(`⚠️  推荐的环境变量 ${varName} 未设置`);
+      console.warn(`   宠物经验值功能将无法使用，请检查部署输出文件并设置环境变量`);
+      console.warn(`   正确的值应该是: STUDENT_PET_CONTRACT_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F`);
+      console.warn(`   .env 文件路径: ${envPath}`);
+    } else {
+      const value = process.env[varName];
+      console.log(`✅ ${varName} = ${value}`);
+      
+      // 验证是否是错误的 RoleManager 地址
+      const roleManagerAddress = process.env.CONTRACT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+      if (value.toLowerCase() === roleManagerAddress.toLowerCase()) {
+        console.error(`❌ 错误：${varName} 被设置为 RoleManager 合约地址！`);
+        console.error(`   当前读取的值: ${value}`);
+        console.error(`   RoleManager 地址: ${roleManagerAddress}`);
+        console.error(`   请设置为 StudentPetNFT 合约地址: 0x0165878A594ca255338adfa4d48449f69242Eb8F`);
+        console.error(`   .env 文件路径: ${envPath || '未知'}`);
+        console.error(`   请检查 ${envPath || 'backend/.env'} 文件中的 ${varName} 值是否正确`);
+        console.error(`   提示：确保文件中是 STUDENT_PET_CONTRACT_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F`);
+        console.error(`   而不是 STUDENT_PET_CONTRACT_ADDRESS=${value}`);
+        
+        // 检查是否有系统环境变量覆盖
+        if (process.env[varName] && process.env[varName] !== value) {
+          console.error(`   ⚠️ 检测到系统环境变量可能覆盖了 .env 文件的值`);
+        }
+      }
+      
+      // 验证地址格式
+      if (!ethers.isAddress(value)) {
+        console.error(`❌ ${varName} 格式无效: ${value}`);
+      }
+    }
+  }
+}
+
+// 在启动时检查环境变量
+checkEnvironmentVariables();
 
 // 数据库连接
 connectDB().then(() => {
@@ -53,6 +134,21 @@ function getStudentPetContract() {
       return null;
     }
     
+    // 验证合约地址格式
+    if (!ethers.isAddress(contractAddress)) {
+      console.error(`❌ STUDENT_PET_CONTRACT_ADDRESS 格式无效: ${contractAddress}`);
+      return null;
+    }
+    
+    // 检查是否错误地使用了 RoleManager 合约地址
+    const roleManagerAddress = process.env.CONTRACT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+    if (contractAddress.toLowerCase() === roleManagerAddress.toLowerCase()) {
+      console.error(`❌ 错误：STUDENT_PET_CONTRACT_ADDRESS 被设置为 RoleManager 合约地址！`);
+      console.error(`   当前值: ${contractAddress}`);
+      console.error(`   请设置为 StudentPetNFT 合约地址: 0x0165878A594ca255338adfa4d48449f69242Eb8F`);
+      return null;
+    }
+    
     const signer = getSigner();
     const abi = [
       "function mintPet(address student) external returns (uint256)",
@@ -62,36 +158,59 @@ function getStudentPetContract() {
       "function studentToTokenId(address) external view returns (uint256)"
     ];
     
+    console.log(`✅ 初始化 StudentPetNFT 合约实例，地址: ${contractAddress}`);
     studentPetContract = new ethers.Contract(contractAddress, abi, signer);
   }
   return studentPetContract;
 }
 
 // 辅助函数：更新学生宠物的经验值（链上）
-async function addPetExperienceOnChain(studentAddress: string, amount: number) {
+async function addPetExperienceOnChain(studentAddress: string, amount: number): Promise<{ success: boolean; error?: string; txHash?: string }> {
   try {
     const contract = getStudentPetContract();
     if (!contract) {
-      console.warn('⚠️ StudentPetNFT contract not available, skipping on-chain update');
-      return false;
+      const errorMsg = '⚠️ StudentPetNFT contract not available. Please check STUDENT_PET_CONTRACT_ADDRESS environment variable.';
+      console.warn(errorMsg);
+      return { success: false, error: errorMsg };
     }
 
     // 确保学生有宠物，如果没有则自动创建
+    try {
     const tokenId = await contract.studentToTokenId(studentAddress);
     if (tokenId === 0n) {
       console.log(`📦 为学生 ${studentAddress} 自动创建宠物...`);
-      await contract.getOrCreatePetTokenId(studentAddress);
+        const createTx = await contract.getOrCreatePetTokenId(studentAddress);
+        console.log(`📤 宠物创建交易: ${createTx.hash}`);
+        await createTx.wait();
+        console.log(`✅ 宠物创建成功`);
+      }
+    } catch (createError: any) {
+      const errorMsg = `创建宠物失败: ${createError.message}`;
+      console.error(`❌ ${errorMsg}`);
+      return { success: false, error: errorMsg };
     }
 
     // 添加经验值
+    try {
     const tx = await contract.addExperience(studentAddress, amount);
     console.log(`📤 发送经验值更新交易: ${tx.hash}`);
-    await tx.wait();
-    console.log(`✅ 学生 ${studentAddress} 获得 ${amount} XP (链上)`);
-    return true;
+      const receipt = await tx.wait();
+      console.log(`✅ 学生 ${studentAddress} 获得 ${amount} XP (链上), 交易确认在区块 ${receipt.blockNumber}`);
+      return { success: true, txHash: tx.hash };
+    } catch (txError: any) {
+      const errorMsg = `经验值更新交易失败: ${txError.message}`;
+      console.error(`❌ ${errorMsg}`);
+      // 检查是否是权限问题
+      if (txError.message.includes('revert') || txError.message.includes('unauthorized')) {
+        console.error(`   可能是权限问题，请检查合约所有者配置`);
+      }
+      return { success: false, error: errorMsg };
+    }
   } catch (error: any) {
-    console.error(`❌ 链上更新经验值失败:`, error.message);
-    return false;
+    const errorMsg = `链上更新经验值失败: ${error.message}`;
+    console.error(`❌ ${errorMsg}`);
+    console.error(`   错误详情:`, error);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -100,17 +219,46 @@ async function getPetInfoFromChain(studentAddress: string) {
   try {
     const contract = getStudentPetContract();
     if (!contract) {
+      console.warn(`⚠️ 无法获取 StudentPetNFT 合约实例，跳过链上查询`);
       return null;
     }
 
+    const contractAddress = contract.target;
+    console.log(`🔍 从链上获取宠物信息，学生地址: ${studentAddress}, 合约地址: ${contractAddress}`);
+
     const [tokenId, stage, experience] = await contract.getPetInfo(studentAddress);
-    return {
+    
+    const result = {
       tokenId: tokenId.toString(),
       stage: Number(stage),
       experience: Number(experience)
     };
+    
+    console.log(`✅ 成功获取宠物信息:`, result);
+    return result;
   } catch (error: any) {
-    console.error(`❌ 从链上获取宠物信息失败:`, error.message);
+    const contract = getStudentPetContract();
+    const contractAddress = contract ? contract.target : 'unknown';
+    
+    console.error(`❌ 从链上获取宠物信息失败:`);
+    console.error(`   学生地址: ${studentAddress}`);
+    console.error(`   合约地址: ${contractAddress}`);
+    console.error(`   错误信息: ${error.message}`);
+    
+    // 检查是否是合约地址错误
+    if (error.message.includes('execution reverted') || error.message.includes('no data present')) {
+      console.error(`   ⚠️ 可能是合约地址配置错误，请检查 STUDENT_PET_CONTRACT_ADDRESS 环境变量`);
+      console.error(`   正确的 StudentPetNFT 合约地址应该是: 0x0165878A594ca255338adfa4d48449f69242Eb8F`);
+      console.error(`   当前配置的地址: ${contractAddress}`);
+      
+      // 检查是否错误地使用了 RoleManager 地址
+      const roleManagerAddress = process.env.CONTRACT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+      if (contractAddress.toLowerCase() === roleManagerAddress.toLowerCase()) {
+        console.error(`   ❌ 确认：当前使用的是 RoleManager 合约地址，这是错误的！`);
+        console.error(`   请将 STUDENT_PET_CONTRACT_ADDRESS 设置为 StudentPetNFT 合约地址`);
+      }
+    }
+    
     return null;
   }
 }
@@ -193,18 +341,34 @@ async function startBlockchainListener(retryCount = 0) {
 
         // 给学生宠物增加经验值 (+5 XP) - 链上更新
         try {
-          await addPetExperienceOnChain(student, 5);
+          console.log(`🎁 开始为学生 ${student} 增加出勤奖励经验值 (+5 XP)...`);
+          const experienceResult = await addPetExperienceOnChain(student, 5);
+          
+          if (experienceResult.success) {
+            console.log(`✅ 经验值更新成功，交易哈希: ${experienceResult.txHash}`);
+            
           // 同时更新数据库（用于快速查询）
+            try {
           const petInfo = await getPetInfoFromChain(student);
-          if (petInfo) {
+              if (petInfo && petInfo.tokenId !== "0") {
             await db.createOrUpdateStudentPet(student, {
               stage: petInfo.stage,
               experience: petInfo.experience,
               tokenId: petInfo.tokenId
             });
+                console.log(`✅ 数据库同步成功，当前经验值: ${petInfo.experience}`);
+              } else {
+                console.warn(`⚠️ 无法从链上获取宠物信息，数据库未更新`);
+              }
+            } catch (dbError: any) {
+              console.warn(`⚠️ 数据库同步失败（链上更新已成功）:`, dbError.message);
+            }
+          } else {
+            console.error(`❌ 经验值更新失败: ${experienceResult.error}`);
+            console.error(`   出勤记录已保存，但学生未获得经验值奖励`);
           }
-        } catch (petError) {
-          console.warn('宠物经验值更新失败:', petError);
+        } catch (petError: any) {
+          console.error('❌ 宠物经验值更新过程中发生异常:', petError);
           // 不影响出勤记录的主流程
         }
 
@@ -564,6 +728,121 @@ app.post("/api/attendance/checkin", authenticateToken, requireStudent, async (re
   }
 });
 
+// 同步指定课次的出勤记录（从区块链查询历史事件）
+app.post("/api/attendance/sync-session/:sessionId", authenticateToken, requireTeacher, async (req: any, res: any) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // 获取session信息
+    const session = await db.getSession(sessionId);
+    if (!session || !session.globalSessionId) {
+      return res.status(404).json({ error: 'Session not found or missing globalSessionId' });
+    }
+
+    const provider = getProvider();
+    const contractAddress = process.env.VITE_CONTRACT_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+    
+    // 创建合约实例
+    const contract = new ethers.Contract(
+      contractAddress,
+      [
+        "event AttendanceRecorded(uint256 indexed sessionId, address indexed student, uint256 tokenId)",
+        "function hasAttended(uint256 sessionId, address student) view returns (bool)"
+      ],
+      provider
+    );
+
+    // 查询该sessionId的所有AttendanceRecorded事件
+    const filter = contract.filters.AttendanceRecorded(session.globalSessionId, null, null);
+    const events = await contract.queryFilter(filter);
+
+    console.log(`📋 找到 ${events.length} 个出勤记录事件 (Session ID: ${session.globalSessionId})`);
+
+    let syncedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (const event of events) {
+      try {
+        const contractSessionId = event.args[0];
+        const student = event.args[1];
+        const tokenId = event.args[2];
+        const txHash = event.transactionHash;
+
+        // 检查数据库中是否已有记录
+        const existingRecord = await db.getAttendanceRecordByStudentAndSession(student, sessionId);
+        if (existingRecord) {
+          skippedCount++;
+          continue;
+        }
+
+        // 保存到数据库
+        await db.createAttendanceRecord({
+          sessionId: sessionId,
+          studentAddress: student,
+          tokenId: tokenId.toString(),
+          txHash: txHash,
+          status: 'present'
+        });
+
+        syncedCount++;
+
+        // 给学生宠物增加经验值（如果还没有增加过）
+        try {
+          console.log(`🎁 开始为学生 ${student} 增加出勤奖励经验值 (+5 XP)...`);
+          const experienceResult = await addPetExperienceOnChain(student, 5);
+          
+          if (experienceResult.success) {
+            console.log(`✅ 经验值更新成功，交易哈希: ${experienceResult.txHash}`);
+            
+            // 同时更新数据库（用于快速查询）
+            try {
+          const petInfo = await getPetInfoFromChain(student);
+              if (petInfo && petInfo.tokenId !== "0") {
+            await db.createOrUpdateStudentPet(student, {
+              stage: petInfo.stage,
+              experience: petInfo.experience,
+              tokenId: petInfo.tokenId
+            });
+                console.log(`✅ 数据库同步成功，当前经验值: ${petInfo.experience}`);
+              } else {
+                console.warn(`⚠️ 无法从链上获取宠物信息，数据库未更新`);
+              }
+            } catch (dbError: any) {
+              console.warn(`⚠️ 数据库同步失败（链上更新已成功）:`, dbError.message);
+            }
+          } else {
+            console.error(`❌ 经验值更新失败 (${student}): ${experienceResult.error}`);
+            errors.push(`学生 ${student} 经验值更新失败: ${experienceResult.error}`);
+          }
+        } catch (petError: any) {
+          console.error(`❌ 宠物经验值更新过程中发生异常 (${student}):`, petError);
+          errors.push(`学生 ${student} 经验值更新异常: ${petError.message}`);
+        }
+
+      } catch (error: any) {
+        errors.push(`处理事件失败: ${error.message}`);
+        console.error('处理事件失败:', error);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `同步完成`,
+      sessionId: sessionId,
+      globalSessionId: session.globalSessionId,
+      totalEvents: events.length,
+      synced: syncedCount,
+      skipped: skippedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error: any) {
+    console.error('同步出勤记录失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 获取出勤记录
 app.get("/api/attendance/records", authenticateToken, async (req: any, res: any) => {
   try {
@@ -774,24 +1053,56 @@ app.post("/api/certificates", authenticateToken, requireTeacher, async (req: any
     });
 
     // 如果证书创建成功，给学生宠物增加经验值 (+50 XP) - 链上更新
+    let experienceUpdateResult = null;
     try {
-      await addPetExperienceOnChain(studentAddress, 50);
+      console.log(`🎁 开始为学生 ${studentAddress} 增加证书奖励经验值 (+50 XP)...`);
+      experienceUpdateResult = await addPetExperienceOnChain(studentAddress, 50);
+      
+      if (experienceUpdateResult.success) {
+        console.log(`✅ 经验值更新成功，交易哈希: ${experienceUpdateResult.txHash}`);
+        
       // 同时更新数据库（用于快速查询）
+        try {
       const petInfo = await getPetInfoFromChain(studentAddress);
-      if (petInfo) {
+          if (petInfo && petInfo.tokenId !== "0") {
         await db.createOrUpdateStudentPet(studentAddress, {
           stage: petInfo.stage,
           experience: petInfo.experience,
           tokenId: petInfo.tokenId
         });
+            console.log(`✅ 数据库同步成功，当前经验值: ${petInfo.experience}, 阶段: ${petInfo.stage}`);
+          } else {
+            console.warn(`⚠️ 无法从链上获取宠物信息，数据库未更新`);
+          }
+        } catch (dbError: any) {
+          console.warn(`⚠️ 数据库同步失败（链上更新已成功）:`, dbError.message);
+          // 链上更新已成功，数据库同步失败不影响主流程
+        }
+      } else {
+        // 经验值更新失败
+        console.error(`❌ 经验值更新失败: ${experienceUpdateResult.error}`);
+        console.error(`   证书已创建，但学生未获得经验值奖励`);
+        // 不影响颁发证书的主流程，但记录错误
       }
-    } catch (petError) {
-      console.warn('宠物经验值更新失败:', petError);
+    } catch (petError: any) {
+      console.error('❌ 宠物经验值更新过程中发生异常:', petError);
+      console.error('   错误详情:', petError);
       // 不影响颁发证书的主流程
     }
 
     console.log('证书创建成功:', cert);
-    res.json(cert);
+    
+    // 返回证书信息，同时包含经验值更新状态
+    const response: any = { ...cert };
+    if (experienceUpdateResult) {
+      response.experienceUpdate = {
+        success: experienceUpdateResult.success,
+        error: experienceUpdateResult.error,
+        txHash: experienceUpdateResult.txHash
+      };
+    }
+    
+    res.json(response);
   } catch (error: any) {
     console.error('证书创建失败:', error);
     res.status(500).json({ error: `证书创建失败: ${error.message}` });
@@ -822,19 +1133,36 @@ app.post("/api/student-work", authenticateToken, requireStudent, async (req: any
     });
 
     // 如果作品创建成功，给学生宠物增加经验值 (+10 XP) - 链上更新
+    let experienceUpdateResult = null;
     try {
-      await addPetExperienceOnChain(req.user!.address, 10);
+      console.log(`🎁 开始为学生 ${req.user!.address} 增加作品奖励经验值 (+10 XP)...`);
+      experienceUpdateResult = await addPetExperienceOnChain(req.user!.address, 10);
+      
+      if (experienceUpdateResult.success) {
+        console.log(`✅ 经验值更新成功，交易哈希: ${experienceUpdateResult.txHash}`);
+        
       // 同时更新数据库（用于快速查询）
+        try {
       const petInfo = await getPetInfoFromChain(req.user!.address);
-      if (petInfo) {
+          if (petInfo && petInfo.tokenId !== "0") {
         await db.createOrUpdateStudentPet(req.user!.address, {
           stage: petInfo.stage,
           experience: petInfo.experience,
           tokenId: petInfo.tokenId
         });
+            console.log(`✅ 数据库同步成功，当前经验值: ${petInfo.experience}`);
+          } else {
+            console.warn(`⚠️ 无法从链上获取宠物信息，数据库未更新`);
+          }
+        } catch (dbError: any) {
+          console.warn(`⚠️ 数据库同步失败（链上更新已成功）:`, dbError.message);
+        }
+      } else {
+        console.error(`❌ 经验值更新失败: ${experienceUpdateResult.error}`);
+        console.error(`   作品已创建，但学生未获得经验值奖励`);
       }
-    } catch (petError) {
-      console.warn('宠物经验值更新失败:', petError);
+    } catch (petError: any) {
+      console.error('❌ 宠物经验值更新过程中发生异常:', petError);
       // 不影响铸造作品的主流程
     }
 
@@ -862,18 +1190,34 @@ app.post("/api/student-work/:id/endorse", authenticateToken, requireTeacher, asy
     // 如果认证成功，给学生宠物增加经验值 (+30 XP) - 链上更新
     if (work && work.studentAddress) {
       try {
-        await addPetExperienceOnChain(work.studentAddress, 30);
+        console.log(`🎁 开始为学生 ${work.studentAddress} 增加作品认证奖励经验值 (+30 XP)...`);
+        const experienceResult = await addPetExperienceOnChain(work.studentAddress, 30);
+        
+        if (experienceResult.success) {
+          console.log(`✅ 经验值更新成功，交易哈希: ${experienceResult.txHash}`);
+          
         // 同时更新数据库（用于快速查询）
+          try {
         const petInfo = await getPetInfoFromChain(work.studentAddress);
-        if (petInfo) {
+            if (petInfo && petInfo.tokenId !== "0") {
           await db.createOrUpdateStudentPet(work.studentAddress, {
             stage: petInfo.stage,
             experience: petInfo.experience,
             tokenId: petInfo.tokenId
           });
+              console.log(`✅ 数据库同步成功，当前经验值: ${petInfo.experience}`);
+            } else {
+              console.warn(`⚠️ 无法从链上获取宠物信息，数据库未更新`);
+            }
+          } catch (dbError: any) {
+            console.warn(`⚠️ 数据库同步失败（链上更新已成功）:`, dbError.message);
+          }
+        } else {
+          console.error(`❌ 经验值更新失败: ${experienceResult.error}`);
+          console.error(`   作品已认证，但学生未获得经验值奖励`);
         }
-      } catch (petError) {
-        console.warn('宠物经验值更新失败:', petError);
+      } catch (petError: any) {
+        console.error('❌ 宠物经验值更新过程中发生异常:', petError);
         // 不影响认证作品的主流程
       }
     }
@@ -934,18 +1278,34 @@ app.post("/api/access-pass/:id/redeem", authenticateToken, async (req: any, res:
 
     // 如果兑换成功，给学生宠物增加经验值 (+20 XP) - 链上更新
     try {
-      await addPetExperienceOnChain(req.user!.address, 20);
+      console.log(`🎁 开始为学生 ${req.user!.address} 增加通行证兑换奖励经验值 (+20 XP)...`);
+      const experienceResult = await addPetExperienceOnChain(req.user!.address, 20);
+      
+      if (experienceResult.success) {
+        console.log(`✅ 经验值更新成功，交易哈希: ${experienceResult.txHash}`);
+        
       // 同时更新数据库（用于快速查询）
+        try {
       const petInfo = await getPetInfoFromChain(req.user!.address);
-      if (petInfo) {
+          if (petInfo && petInfo.tokenId !== "0") {
         await db.createOrUpdateStudentPet(req.user!.address, {
           stage: petInfo.stage,
           experience: petInfo.experience,
           tokenId: petInfo.tokenId
         });
+            console.log(`✅ 数据库同步成功，当前经验值: ${petInfo.experience}`);
+          } else {
+            console.warn(`⚠️ 无法从链上获取宠物信息，数据库未更新`);
+          }
+        } catch (dbError: any) {
+          console.warn(`⚠️ 数据库同步失败（链上更新已成功）:`, dbError.message);
+        }
+      } else {
+        console.error(`❌ 经验值更新失败: ${experienceResult.error}`);
+        console.error(`   通行证已兑换，但学生未获得经验值奖励`);
       }
-    } catch (petError) {
-      console.warn('宠物经验值更新失败:', petError);
+    } catch (petError: any) {
+      console.error('❌ 宠物经验值更新过程中发生异常:', petError);
       // 不影响兑换通行证的主流程
     }
 

@@ -11,7 +11,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * Fully decentralized: All experience and stage data stored on-chain
  */
 contract StudentPetNFT is ERC721, Ownable {
-    uint256 private _nextTokenId;
+    // Start tokenId from 1 to avoid zero being treated as "no pet"
+    uint256 private _nextTokenId = 1;
 
     // Stage definitions
     enum Stage { Seed, Sprout, Flower, Withered }
@@ -98,8 +99,8 @@ contract StudentPetNFT is ERC721, Ownable {
      */
     function addExperience(address studentAddress, uint256 amount) external onlyOwner {
         uint256 tokenId = studentToTokenId[studentAddress];
-        require(tokenId != 0, "Student does not have a pet");
-        require(_ownerOf(tokenId) != address(0), "Token does not exist");
+        // tokenId can be 0 if the first pet was minted before this fix; rely on ownership check instead
+        require(_ownerOf(tokenId) != address(0), "Student does not have a pet");
 
         Stage oldStage = petStages[tokenId];
         petExperience[tokenId] += amount;

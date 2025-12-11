@@ -62,38 +62,36 @@ echo Smart contract deployment completed.
 
 echo.
 echo Step 4: Extracting contract addresses from deployment output...
-echo Extracting RoleManager contract address...
-set CONTRACT_ADDRESS=
-for /f "delims=" %%i in ('findstr "RoleManager deployed to:" deploy_output.txt 2^>nul') do (
-    for /f "tokens=4" %%a in ("%%i") do (
-        set CONTRACT_ADDRESS=%%a
-        goto :found_rolemanager
-    )
+
+REM --- RoleManager address ---
+set "CONTRACT_ADDRESS="
+for /f "tokens=4" %%a in ('findstr /c:"RoleManager deployed to:" deploy_output.txt 2^>nul') do (
+    set "CONTRACT_ADDRESS=%%a"
 )
-:found_rolemanager
 if not defined CONTRACT_ADDRESS (
     echo Could not find RoleManager address, using default
-    set CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-    echo Using default address: %CONTRACT_ADDRESS%
+    set "CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3"
+    echo Using default RoleManager address: %CONTRACT_ADDRESS%
 ) else (
     echo Using RoleManager address: %CONTRACT_ADDRESS%
 )
 
-echo Extracting StudentPetNFT contract address...
-set STUDENT_PET_CONTRACT_ADDRESS=
-for /f "delims=" %%i in ('findstr "StudentPetNFT deployed to:" deploy_output.txt 2^>nul') do (
-    for /f "tokens=4" %%a in ("%%i") do (
-        set STUDENT_PET_CONTRACT_ADDRESS=%%a
-        goto :found_studentpet
-    )
+REM --- StudentPetNFT address ---
+set "STUDENT_PET_CONTRACT_ADDRESS="
+for /f "tokens=4" %%a in ('findstr /c:"StudentPetNFT deployed to:" deploy_output.txt 2^>nul') do (
+    set "STUDENT_PET_CONTRACT_ADDRESS=%%a"
 )
-:found_studentpet
 if not defined STUDENT_PET_CONTRACT_ADDRESS (
     echo Warning: Could not find StudentPetNFT address from deployment output
-    echo Please check deploy_output.txt manually
+    echo Using default StudentPetNFT address: 0x0165878A594ca255338adfa4d48449f69242Eb8F
+    set "STUDENT_PET_CONTRACT_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F"
 ) else (
     echo Using StudentPetNFT address: %STUDENT_PET_CONTRACT_ADDRESS%
 )
+
+REM --- Sanity check: addresses must differ ---
+if /i "%CONTRACT_ADDRESS%"=="%STUDENT_PET_CONTRACT_ADDRESS%" goto ADDR_ERROR
+
 
 echo.
 echo Step 5: Setting up teacher roles...
@@ -192,3 +190,14 @@ echo.
 echo Please wait for the frontend to fully load, then visit http://localhost:5173
 echo.
 pause
+
+goto :eof
+
+:ADDR_ERROR
+echo ERROR: StudentPetNFT address equals RoleManager address. Please check deploy_output.txt.
+echo   RoleManager: %CONTRACT_ADDRESS%
+echo   StudentPetNFT (expected): 0x0165878A594ca255338adfa4d48449f69242Eb8F
+echo   StudentPetNFT (read)    : %STUDENT_PET_CONTRACT_ADDRESS%
+echo Aborting to avoid writing wrong address to backend/.env
+pause
+exit /b 1
